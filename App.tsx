@@ -17,10 +17,11 @@ import {
   clearAllData,
   type MonthlyData 
 } from './services/storeManager';
+import { saveSalesData, getAllSalesData, saveMonthlyData, getMonthlyData, getLatestData } from './services/firestoreService';
+import { downloadBackup, loadBackup, restoreBackup, compareBackup } from './services/backupService';
 import type { WaldData, Store } from './types';
-
-
-
+import GoogleLoginButton from './src/components/GoogleLoginButton';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 function App(): React.ReactNode {
   const [reportData, setReportData] = useState<Partial<WaldData> | null>(null);
@@ -32,6 +33,71 @@ function App(): React.ReactNode {
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingSync, setPendingSync] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  
+  // Firestoreデータとローカルストレージの完全同期
+  const syncDataWithFirestore = useCallback(async (uid: string) => {
+    setIsSyncing(true);
+    try {
+      const localMonthlyData = loadMonthlyData();
+      const firestoreMonthlyData = await getMonthlyData(uid);
+      
+      // 最新データを判定して同期
+      const { data: latestData, source } = getLatestData(localMonthlyData, firestoreMonthlyData);
+      
+      console.log(`データ同期: ${source} データを使用`);
+      
+      // 最新データをローカルストレージに保存
+      localStorage.setItem('monthlyData', JSON.stringify(latestData));
+      setMonthlyData(latestData);
+      
+      // Firestoreに最新データを保存（ローカルデータが新しい場合）
+      if (source === 'local' || source === 'merged') {
+        await saveMonthlyData(uid, latestData);
+        console.log('Firestoreに最新データを保存しました');
+      }
+      
+      // 店舗データも同期
+      const loadedStores = loadStores();
+      if (loadedStores.length > 0) {
+        setStores(loadedStores);
+        
+        // デフォルトで最初の店舗を選択（まだ選択されていない場合）
+        if (selectedStores.length === 0) {
+          setSelectedStores([loadedStores[0].id]);
+          setSelectedStoreId(loadedStores[0].id);
+        }
+      }
+      
+      console.log('完全同期が完了しました');
+    } catch (error) {
+      console.error('データ同期エラー:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [selectedStores.length]);
+  
+  // Firebase認証状態の監視
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      setIsAuthLoading(false);
+      
+      // ユーザーがログインした場合、Firestoreからデータを読み込む
+      if (user) {
+        await syncDataWithFirestore(user.uid);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [syncDataWithFirestore]);
   
   // 初期化時にローカルストレージからデータを読み込み
   useEffect(() => {
@@ -47,6 +113,33 @@ function App(): React.ReactNode {
       setSelectedStoreId(loadedStores[0].id);
     }
   }, []);
+  
+  // ネットワーク状態の監視
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      console.log('ネットワーク接続が復旧しました');
+      
+      // オフライン中に変更があった場合は同期を実行
+      if (pendingSync && user) {
+        syncDataWithFirestore(user.uid);
+        setPendingSync(false);
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.log('ネットワーク接続が切断されました');
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [pendingSync, user]);
   
   const handleFileProcess = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -72,6 +165,29 @@ function App(): React.ReactNode {
         const updatedData = addOrUpdateStoreData(result.month, selectedStore.id, result, file.name);
         setMonthlyData(updatedData);
         
+        // ログインユーザーがいる場合はFirestoreにも保存
+        if (user) {
+          if (isOnline) {
+            try {
+              await saveSalesData({
+                uid: user.uid,
+                storeCode: selectedStore.code,
+                month: result.month,
+                salesData: result.cafe // カフェ売上データを保存
+              });
+              console.log('Firestoreにデータを保存しました');
+            } catch (firestoreError) {
+              console.error('Firestore保存エラー:', firestoreError);
+              // Firestore保存に失敗してもローカル保存は成功しているので、エラーは表示しない
+              setPendingSync(true);
+            }
+          } else {
+            // オフライン時は後で同期するようにマーク
+            setPendingSync(true);
+            console.log('オフライン中: 後で同期します');
+          }
+        }
+        
         // 現在選択中の月に新しい月を追加
         const newSelectedMonths = selectedMonths.includes(result.month) 
           ? selectedMonths 
@@ -90,7 +206,7 @@ function App(): React.ReactNode {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMonths, selectedStores, stores]);
+  }, [selectedMonths, selectedStores, stores, user]);
 
   const handleMonthSelectionChange = useCallback((months: string[]) => {
     setSelectedMonths(months);
@@ -147,6 +263,49 @@ function App(): React.ReactNode {
     setSelectedStoreId(null);
   }, []);
 
+  // バックアップダウンロード
+  const handleBackupDownload = useCallback(() => {
+    try {
+      downloadBackup();
+    } catch (error) {
+      setBackupError('バックアップの作成に失敗しました');
+    }
+  }, []);
+  
+  // バックアップ復元
+  const handleBackupRestore = useCallback(async (file: File) => {
+    try {
+      setBackupError(null);
+      const backup = await loadBackup(file);
+      
+      // バックアップデータと現在のデータを比較
+      const comparison = compareBackup(backup);
+      
+      if (comparison.storesChanged || comparison.monthlyDataChanged) {
+        // データが変更されている場合は復元を実行
+        restoreBackup(backup);
+        
+        // 状態を更新
+        setStores(backup.stores);
+        setMonthlyData(backup.monthlyData);
+        setSelectedStores([]);
+        setSelectedStoreId(null);
+        setReportData(null);
+        
+        // ログインユーザーがいる場合はFirestoreにも同期
+        if (user) {
+          setPendingSync(true);
+        }
+        
+        console.log('バックアップデータを復元しました');
+      } else {
+        setBackupError('現在のデータと同じです');
+      }
+    } catch (error: any) {
+      setBackupError(error.message || 'バックアップの復元に失敗しました');
+    }
+  }, [user]);
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       <Sidebar />
@@ -169,6 +328,64 @@ function App(): React.ReactNode {
         </header>
 
         <div className="flex-1 overflow-y-auto p-6">
+          {/* 認証状態の表示 */}
+          <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
+            <div className="flex items-center justify-between">
+              <div>
+                {isAuthLoading ? (
+                  <p className="text-gray-600">認証状態を確認中...</p>
+                ) : user ? (
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">✓</span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">ログイン中</p>
+                      <p className="font-medium text-gray-800">{user.email}</p>
+                      {isSyncing && (
+                        <p className="text-xs text-blue-600">データ同期中...</p>
+                      )}
+                      {!isOnline && (
+                        <p className="text-xs text-orange-600">オフライン中</p>
+                      )}
+                      {pendingSync && !isSyncing && (
+                        <p className="text-xs text-yellow-600">同期待機中</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <span className="text-gray-600 text-sm">?</span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">ログインしていません</p>
+                      <p className="text-xs text-gray-500">ログインするとデータがクラウドに保存されます</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowBackupModal(true)}
+                  className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  バックアップ
+                </button>
+                {user && (
+                  <button
+                    onClick={() => syncDataWithFirestore(user.uid)}
+                    disabled={isSyncing}
+                    className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSyncing ? '同期中...' : '同期'}
+                  </button>
+                )}
+                <GoogleLoginButton />
+              </div>
+            </div>
+          </div>
+          
           {isLoading && <Spinner />}
           
           {!isLoading && error && (
@@ -215,6 +432,66 @@ function App(): React.ReactNode {
           )}
         </div>
       </main>
+      
+      {/* バックアップ・復元モーダル */}
+      {showBackupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">データのバックアップ・復元</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">バックアップの作成</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  現在のデータをJSONファイルとしてダウンロードします
+                </p>
+                <button
+                  onClick={handleBackupDownload}
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  バックアップをダウンロード
+                </button>
+              </div>
+              
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">バックアップの復元</h4>
+                <p className="text-sm text-gray-600 mb-3">
+                  バックアップファイルを選択してデータを復元します
+                </p>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleBackupRestore(file);
+                    }
+                  }}
+                  className="w-full text-sm"
+                />
+              </div>
+              
+              {backupError && (
+                <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
+                  {backupError}
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowBackupModal(false);
+                  setBackupError(null);
+                }}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
