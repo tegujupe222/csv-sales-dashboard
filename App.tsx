@@ -306,6 +306,25 @@ function App(): React.ReactNode {
     }
   }, [user]);
 
+  if (isAuthLoading) {
+    return <div>認証状態を確認中...</div>;
+  }
+
+  if (!user) {
+    // ログイン画面
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="bg-white p-8 rounded shadow-md text-center">
+          <h2 className="text-2xl font-bold mb-4">ログイン</h2>
+          <p className="mb-4 text-gray-600">Googleアカウントでログインしてください</p>
+          <GoogleLoginButton />
+        </div>
+      </div>
+    );
+  }
+
+  // ここから下は「ログイン済み」の場合のダッシュボード
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       <Sidebar />
@@ -332,38 +351,24 @@ function App(): React.ReactNode {
           <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
             <div className="flex items-center justify-between">
               <div>
-                {isAuthLoading ? (
-                  <p className="text-gray-600">認証状態を確認中...</p>
-                ) : user ? (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">✓</span>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">ログイン中</p>
-                      <p className="font-medium text-gray-800">{user.email}</p>
-                      {isSyncing && (
-                        <p className="text-xs text-blue-600">データ同期中...</p>
-                      )}
-                      {!isOnline && (
-                        <p className="text-xs text-orange-600">オフライン中</p>
-                      )}
-                      {pendingSync && !isSyncing && (
-                        <p className="text-xs text-yellow-600">同期待機中</p>
-                      )}
-                    </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">✓</span>
                   </div>
-                ) : (
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <span className="text-gray-600 text-sm">?</span>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">ログインしていません</p>
-                      <p className="text-xs text-gray-500">ログインするとデータがクラウドに保存されます</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-600">ログイン中</p>
+                    <p className="font-medium text-gray-800">{user.email}</p>
+                    {isSyncing && (
+                      <p className="text-xs text-blue-600">データ同期中...</p>
+                    )}
+                    {!isOnline && (
+                      <p className="text-xs text-orange-600">オフライン中</p>
+                    )}
+                    {pendingSync && !isSyncing && (
+                      <p className="text-xs text-yellow-600">同期待機中</p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -381,7 +386,6 @@ function App(): React.ReactNode {
                     {isSyncing ? '同期中...' : '同期'}
                   </button>
                 )}
-                <GoogleLoginButton />
               </div>
             </div>
           </div>
