@@ -420,7 +420,7 @@ function App(): React.ReactNode {
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center space-x-3">
               <LogoIcon className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-gray-800">売上分析ダッシュボード</h1>
+              <h1 className="text-2xl font-bold text-gray-800">EVEN View</h1>
             </div>
             {reportData && (
               <button
