@@ -1,7 +1,7 @@
 import React from 'react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../../firebase';
-import { registerUser } from '../../services/userService';
+
 
 const GoogleLoginButton: React.FC = () => {
   const handleLogin = async () => {
@@ -12,14 +12,8 @@ const GoogleLoginButton: React.FC = () => {
       }
       
       const result = await signInWithPopup(auth, provider);
-      // Firestoreにユーザー登録
-      await registerUser({
-        uid: result.user.uid,
-        email: result.user.email || '',
-        displayName: result.user.displayName || ''
-      });
       alert(`ログイン成功: ${result.user.displayName}`);
-      // 必要ならユーザー情報を状態管理に保存
+      // ユーザー登録はApp.tsxで処理される
     } catch (error: any) {
       console.error('Login error:', error);
       

@@ -23,8 +23,10 @@ import { downloadBackup, loadBackup, restoreBackup, compareBackup } from './serv
 import type { WaldData, Store } from './types';
 import GoogleLoginButton from './src/components/GoogleLoginButton';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { getUser } from './services/userService';
+import { getUser, registerUser } from './services/userService';
 import AdminDashboard from './components/AdminDashboard';
+import RegistrationModal from './components/RegistrationModal';
+import ApprovalPendingScreen from './components/ApprovalPendingScreen';
 
 const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
@@ -47,6 +49,8 @@ function App(): React.ReactNode {
   const [backupError, setBackupError] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState<{email: string, displayName: string} | null>(null);
   
   // 共有データベースとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async (uid: string) => {
@@ -102,8 +106,18 @@ function App(): React.ReactNode {
           if (user) {
             // Firestoreから承認状態を取得
             const appUser = await getUser(user.uid);
-            setIsApproved(appUser?.approved ?? false);
-            await syncDataWithFirestore(user.uid);
+            
+            if (!appUser) {
+              // 新規ユーザーの場合、登録モーダルを表示
+              setPendingRegistration({
+                email: user.email || '',
+                displayName: user.displayName || ''
+              });
+              setShowRegistrationModal(true);
+            } else {
+              setIsApproved(appUser.approved);
+              await syncDataWithFirestore(user.uid);
+            }
           } else {
             setIsApproved(null);
           }
@@ -291,6 +305,31 @@ function App(): React.ReactNode {
     }
   }, []);
 
+  const handleRegistrationConfirm = useCallback(async () => {
+    if (!user || !pendingRegistration) return;
+    
+    try {
+      await registerUser({
+        uid: user.uid,
+        email: pendingRegistration.email,
+        displayName: pendingRegistration.displayName
+      });
+      
+      setShowRegistrationModal(false);
+      setPendingRegistration(null);
+      setIsApproved(false); // 承認待ち状態に設定
+    } catch (error) {
+      console.error('登録エラー:', error);
+    }
+  }, [user, pendingRegistration]);
+
+  const handleRegistrationCancel = useCallback(() => {
+    setShowRegistrationModal(false);
+    setPendingRegistration(null);
+    // ログアウトしてログイン画面に戻る
+    handleLogout();
+  }, [handleLogout]);
+
   // バックアップダウンロード
   const handleBackupDownload = useCallback(() => {
     try {
@@ -339,22 +378,26 @@ function App(): React.ReactNode {
     return <AdminDashboard currentUserEmail={user.email} onBack={() => setShowAdmin(false)} onLogout={handleLogout} />;
   }
 
+  // 登録モーダル
+  if (showRegistrationModal && pendingRegistration) {
+    return (
+      <RegistrationModal
+        userEmail={pendingRegistration.email}
+        userName={pendingRegistration.displayName}
+        onConfirm={handleRegistrationConfirm}
+        onCancel={handleRegistrationCancel}
+      />
+    );
+  }
+
   // 承認待ち画面
   if (!isAuthLoading && user && isApproved === false) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="bg-white p-8 rounded shadow-md text-center">
-          <h2 className="text-2xl font-bold mb-4">管理者の承認待ちです</h2>
-          <p className="mb-4 text-gray-600">承認されるまでお待ちください。</p>
-          <p className="text-sm text-gray-500 mb-6">メールアドレス: {user.email}</p>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            ログアウト
-          </button>
-        </div>
-      </div>
+      <ApprovalPendingScreen
+        userEmail={user.email || ''}
+        userName={user.displayName || ''}
+        onLogout={handleLogout}
+      />
     );
   }
 
