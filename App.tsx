@@ -68,16 +68,17 @@ function App(): React.ReactNode {
         localStorage.setItem('monthlyData', JSON.stringify([]));
         setMonthlyData([]);
       }
-      if (sharedStores) {
+      if (sharedStores && sharedStores.length > 0) {
         localStorage.setItem('wald_stores', JSON.stringify(sharedStores));
         setStores(sharedStores);
-        if (sharedStores.length > 0 && selectedStores.length === 0) {
+        if (selectedStores.length === 0) {
           setSelectedStores([sharedStores[0].id]);
           setSelectedStoreId(sharedStores[0].id);
         }
       } else {
-        localStorage.setItem('wald_stores', JSON.stringify([]));
-        setStores([]);
+        // 取得できなかった場合はローカルデータを保持
+        const localStores = loadStores();
+        setStores(localStores);
       }
       console.log('shared_dataから完全同期が完了しました');
     } catch (error) {
