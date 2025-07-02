@@ -373,8 +373,11 @@ function App(): React.ReactNode {
     }
   }, [user]);
 
+  // 管理者判定
+  const isAdmin: boolean = !!user && user.email === ADMIN_EMAIL;
+
   // 管理者ダッシュボード表示
-  if (!isAuthLoading && user && isApproved && showAdmin && user.email === ADMIN_EMAIL) {
+  if (!isAuthLoading && user && isApproved && showAdmin && isAdmin) {
     return <AdminDashboard currentUserEmail={user.email} onBack={() => setShowAdmin(false)} onLogout={handleLogout} />;
   }
 
@@ -422,7 +425,7 @@ function App(): React.ReactNode {
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
-      <Sidebar />
+      <Sidebar isAdmin={isAdmin} onAdminDashboard={() => setShowAdmin(true)} />
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-md z-10">
           <div className="flex items-center justify-between p-4">
@@ -596,15 +599,6 @@ function App(): React.ReactNode {
             </div>
           </div>
         </div>
-      )}
-      {/* 既存の管理者用ボタンを追加 */}
-      {user && isApproved && user.email === ADMIN_EMAIL && (
-        <button
-          style={{ position: 'fixed', top: 10, right: 10, zIndex: 1000, background: '#222', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
-          onClick={() => setShowAdmin(true)}
-        >
-          ユーザー管理
-        </button>
       )}
     </div>
   );
