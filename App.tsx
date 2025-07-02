@@ -106,14 +106,15 @@ function App(): React.ReactNode {
           if (user) {
             // Firestoreから承認状態を取得
             const appUser = await getUser(user.uid);
-            
+
             if (!appUser) {
-              // 新規ユーザーの場合、登録モーダルを表示
+              // 新規ユーザーの場合、登録モーダルを必ず表示
               setPendingRegistration({
                 email: user.email || '',
                 displayName: user.displayName || ''
               });
               setShowRegistrationModal(true);
+              setIsApproved(false); // 承認待ち状態に明示的にする
             } else {
               setIsApproved(appUser.approved);
               await syncDataWithFirestore(user.uid);
