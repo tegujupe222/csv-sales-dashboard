@@ -85,18 +85,29 @@ function App(): React.ReactNode {
   
   // Firebase認証状態の監視
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      setIsAuthLoading(false);
-      
-      // ユーザーがログインした場合、Firestoreからデータを読み込む
-      if (user) {
-        await syncDataWithFirestore(user.uid);
+    try {
+      const auth = getAuth();
+      if (auth) {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          setUser(user);
+          setIsAuthLoading(false);
+          
+          // ユーザーがログインした場合、Firestoreからデータを読み込む
+          if (user) {
+            await syncDataWithFirestore(user.uid);
+          }
+        });
+        
+        return () => unsubscribe();
+      } else {
+        // Firebase is not available
+        setIsAuthLoading(false);
+        console.log('Firebase authentication not available');
       }
-    });
-    
-    return () => unsubscribe();
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+      setIsAuthLoading(false);
+    }
   }, [syncDataWithFirestore]);
   
   // 初期化時にローカルストレージからデータを読み込み
