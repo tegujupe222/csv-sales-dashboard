@@ -190,11 +190,12 @@ const processProductSales = (rows: string[][]): Partial<WaldData> => {
 }
 
 
-export const processCsvFile = (file: File): Promise<Partial<WaldData>> => {
+export const processCsvFile = (file: File, selectedStoreCode?: string): Promise<Partial<WaldData>> => {
   return new Promise((resolve, reject) => {
     const fileType = detectFileType(file.name);
     const month = extractMonth(file.name);
-    const storeCode = extractStoreCode(file.name);
+    // 選択された店舗コードがある場合はそれを使用、なければファイル名から抽出
+    const storeCode = selectedStoreCode || extractStoreCode(file.name);
 
     if (fileType === FileType.Unknown) {
       return reject(new Error("不明またはサポートされていないCSVファイル形式です。"));

@@ -58,6 +58,19 @@ export const getStoreName = (storeId: string): string => {
   return store?.name || '不明な店舗';
 };
 
+// 重複ファイルチェック
+const checkDuplicateFile = (month: string, storeId: string, fileName: string): boolean => {
+  const monthlyData = loadMonthlyData();
+  const monthData = monthlyData.find(m => m.month === month);
+  
+  if (!monthData) return false;
+  
+  const storeData = monthData.stores.find(s => s.store.id === storeId);
+  if (!storeData) return false;
+  
+  return storeData.uploadHistory?.includes(fileName) || false;
+};
+
 // 月次データをローカルストレージから読み込み
 export const loadMonthlyData = (): MonthlyData[] => {
   try {
@@ -84,7 +97,8 @@ export const saveMonthlyData = (data: MonthlyData[]): void => {
 export const addOrUpdateStoreData = (
   month: string, 
   storeId: string, 
-  newData: Partial<WaldData>
+  newData: Partial<WaldData>,
+  fileName?: string
 ): MonthlyData[] => {
   const monthlyData = loadMonthlyData();
   const stores = loadStores();
@@ -92,6 +106,14 @@ export const addOrUpdateStoreData = (
   
   if (!store) {
     throw new Error('店舗が見つかりません');
+  }
+
+  // 重複ファイルチェック
+  if (fileName) {
+    const isDuplicate = checkDuplicateFile(month, storeId, fileName);
+    if (isDuplicate) {
+      throw new Error(`ファイル "${fileName}" は既にアップロードされています。同じファイルを再度アップロードすることはできません。`);
+    }
   }
 
   // 既存の月データを探す
@@ -108,19 +130,28 @@ export const addOrUpdateStoreData = (
       const existingData = monthlyData[existingMonthIndex].stores[existingStoreIndex].data;
       const updatedData = mergeWaldData(existingData, newData);
       
+      // アップロード履歴を更新
+      const uploadHistory = monthlyData[existingMonthIndex].stores[existingStoreIndex].uploadHistory || [];
+      if (fileName && !uploadHistory.includes(fileName)) {
+        uploadHistory.push(fileName);
+      }
+      
       monthlyData[existingMonthIndex].stores[existingStoreIndex] = {
         store,
         data: updatedData,
         lastUpdated: new Date().toISOString(),
-        fileCount: monthlyData[existingMonthIndex].stores[existingStoreIndex].fileCount + 1,
+        fileCount: uploadHistory.length,
+        uploadHistory,
       };
     } else {
       // 新しい店舗データを追加
+      const uploadHistory = fileName ? [fileName] : [];
       monthlyData[existingMonthIndex].stores.push({
         store,
         data: newData,
         lastUpdated: new Date().toISOString(),
         fileCount: 1,
+        uploadHistory,
       });
     }
     
@@ -128,6 +159,7 @@ export const addOrUpdateStoreData = (
     monthlyData[existingMonthIndex].totalFileCount += 1;
   } else {
     // 新しい月データを作成
+    const uploadHistory = fileName ? [fileName] : [];
     monthlyData.push({
       month,
       stores: [{
@@ -135,6 +167,7 @@ export const addOrUpdateStoreData = (
         data: newData,
         lastUpdated: new Date().toISOString(),
         fileCount: 1,
+        uploadHistory,
       }],
       lastUpdated: new Date().toISOString(),
       totalFileCount: 1,
@@ -200,6 +233,8 @@ const mergeSalesCategoryData = (existing: any, incoming: any) => {
 const mergeProductSales = (existing: any, incoming: any) => {
   if (!existing) return incoming;
   
+  // 商品データは単純に加算（同じ商品が複数回アップロードされることは想定しない）
+  // 実際の商品データは日別データとして管理されるため、ここでは合計値のみを扱う
   return {
     sandwiches: {
       sales8: existing.sandwiches.sales8 + incoming.sandwiches.sales8,

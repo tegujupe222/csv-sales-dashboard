@@ -131,6 +131,26 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
                   <p className="text-xs text-gray-500">
                     最終更新: {formatDate(monthData.lastUpdated)}
                   </p>
+                  {/* 店舗別アップロード履歴 */}
+                  <div className="mt-1 space-y-1">
+                    {monthData.stores.map((storeData) => (
+                      <div key={storeData.store.id} className="text-xs text-gray-400">
+                        <span className="font-medium">{storeData.store.name}:</span>
+                        {storeData.uploadHistory && storeData.uploadHistory.length > 0 ? (
+                          <span className="ml-1">
+                            {storeData.uploadHistory.length}ファイル
+                            {storeData.uploadHistory.length <= 3 ? (
+                              <span className="ml-1">({storeData.uploadHistory.join(', ')})</span>
+                            ) : (
+                              <span className="ml-1">({storeData.uploadHistory.slice(0, 2).join(', ')}...)</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="ml-1">ファイルなし</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               

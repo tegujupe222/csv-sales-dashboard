@@ -53,17 +53,23 @@ function App(): React.ReactNode {
     setError(null);
     setLastFileName(file.name);
     try {
-      const result = await processCsvFile(file);
+      // 店舗が選択されていない場合はエラー
+      if (selectedStores.length === 0) {
+        throw new Error('CSVをアップロードする前に、店舗を選択してください。');
+      }
       
-      if (result.month && result.storeId) {
-        // 店舗IDから店舗を特定
-        const store = stores.find(s => s.code === result.storeId);
-        if (!store) {
-          throw new Error(`店舗コード "${result.storeId}" に対応する店舗が見つかりません。店舗管理で店舗を追加してください。`);
-        }
-        
+      // 複数の店舗が選択されている場合は、最初の店舗を使用
+      const selectedStoreId = selectedStores[0];
+      const selectedStore = stores.find(s => s.id === selectedStoreId);
+      if (!selectedStore) {
+        throw new Error('選択された店舗が見つかりません。');
+      }
+      
+      const result = await processCsvFile(file, selectedStore.code);
+      
+      if (result.month) {
         // 新しいデータをローカルストレージに保存
-        const updatedData = addOrUpdateStoreData(result.month, store.id, result);
+        const updatedData = addOrUpdateStoreData(result.month, selectedStore.id, result, file.name);
         setMonthlyData(updatedData);
         
         // 現在選択中の月に新しい月を追加
@@ -72,17 +78,11 @@ function App(): React.ReactNode {
           : [...selectedMonths, result.month];
         setSelectedMonths(newSelectedMonths);
         
-        // 現在選択中の店舗に新しい店舗を追加
-        const newSelectedStores = selectedStores.includes(store.id) 
-          ? selectedStores 
-          : [...selectedStores, store.id];
-        setSelectedStores(newSelectedStores);
-        
         // 統合データを表示
-        const summaryData = createSummaryData(newSelectedMonths, newSelectedStores);
+        const summaryData = createSummaryData(newSelectedMonths, selectedStores);
         setReportData(summaryData);
       } else {
-        throw new Error('ファイル名から店舗情報を抽出できませんでした。ファイル名に店舗コードを含めてください。');
+        throw new Error('ファイル名から月情報を抽出できませんでした。');
       }
     } catch (e: any) {
       setError(e.message || 'ファイルの処理に失敗しました。ファイル形式を確認して再度お試しください。');

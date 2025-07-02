@@ -53,6 +53,7 @@ export interface StoreData {
   data: Partial<WaldData>;
   lastUpdated: string;
   fileCount: number;
+  uploadHistory?: string[]; // アップロードされたファイル名の履歴
 }
 
 export interface MonthlyData {
