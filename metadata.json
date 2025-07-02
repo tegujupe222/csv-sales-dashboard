@@ -1,0 +1,5 @@
+{
+  "name": "CSV Sales Dashboard",
+  "description": "An application to upload cafe sales CSV files, which automatically generates tables, performs calculations, and visualizes the data with graphs, based on a provided business logic.",
+  "requestFramePermissions": []
+}
