@@ -58,6 +58,7 @@ function App(): React.ReactNode {
     try {
       // shared_dataから最新データを取得
       const sharedMonthlyData = await getSharedMonthlyData();
+      console.log('Firestore sharedMonthlyData:', sharedMonthlyData);
       const sharedStores = await (await import('./services/sharedDataService')).getSharedStoreData();
       console.log('Firestore sharedStores:', sharedStores);
 
