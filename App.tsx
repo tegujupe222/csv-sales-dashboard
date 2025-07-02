@@ -59,17 +59,15 @@ function App(): React.ReactNode {
       // shared_dataから最新データを取得
       const sharedMonthlyData = await getSharedMonthlyData();
       console.log('Firestore sharedMonthlyData:', sharedMonthlyData);
+      setMonthlyData(sharedMonthlyData || []);
+      // 最初の月・店舗を自動選択
+      if (sharedMonthlyData && sharedMonthlyData.length > 0) {
+        if (selectedMonths.length === 0) {
+          setSelectedMonths([sharedMonthlyData[0].month]);
+        }
+      }
       const sharedStores = await (await import('./services/sharedDataService')).getSharedStoreData();
       console.log('Firestore sharedStores:', sharedStores);
-
-      // 取得できたらローカルストレージを上書き
-      if (sharedMonthlyData) {
-        localStorage.setItem('monthlyData', JSON.stringify(sharedMonthlyData));
-        setMonthlyData(sharedMonthlyData);
-      } else {
-        localStorage.setItem('monthlyData', JSON.stringify([]));
-        setMonthlyData([]);
-      }
       if (sharedStores && sharedStores.length > 0) {
         localStorage.setItem('wald_stores', JSON.stringify(sharedStores));
         setStores(sharedStores);
@@ -78,7 +76,6 @@ function App(): React.ReactNode {
           setSelectedStoreId(sharedStores[0].id);
         }
       } else {
-        // 取得できなかった場合はローカルデータを保持
         const localStores = loadStores();
         setStores(localStores);
       }
