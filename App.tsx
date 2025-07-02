@@ -206,7 +206,7 @@ function App(): React.ReactNode {
         setSelectedMonths(newSelectedMonths);
         
         // 統合データを表示
-        const summaryData = createSummaryData(newSelectedMonths, selectedStores);
+        const summaryData = createSummaryData(newSelectedMonths, selectedStores, monthlyData);
         setReportData(summaryData);
       } else {
         throw new Error('ファイル名から月情報を抽出できませんでした。');
@@ -222,22 +222,22 @@ function App(): React.ReactNode {
   const handleMonthSelectionChange = useCallback((months: string[]) => {
     setSelectedMonths(months);
     if (months.length > 0 && selectedStores.length > 0) {
-      const summaryData = createSummaryData(months, selectedStores);
+      const summaryData = createSummaryData(months, selectedStores, monthlyData);
       setReportData(summaryData);
     } else {
       setReportData(null);
     }
-  }, [selectedStores]);
+  }, [selectedStores, monthlyData]);
 
   const handleStoreSelectionChange = useCallback((storeIds: string[]) => {
     setSelectedStores(storeIds);
     if (selectedMonths.length > 0 && storeIds.length > 0) {
-      const summaryData = createSummaryData(selectedMonths, storeIds);
+      const summaryData = createSummaryData(selectedMonths, storeIds, monthlyData);
       setReportData(summaryData);
     } else {
       setReportData(null);
     }
-  }, [selectedMonths]);
+  }, [selectedMonths, monthlyData]);
 
   const handleDeleteMonth = useCallback((month: string) => {
     const updatedData = deleteStoreData(month, selectedStoreId || '');
@@ -247,7 +247,7 @@ function App(): React.ReactNode {
     setSelectedMonths(newSelectedMonths);
     
     if (newSelectedMonths.length > 0 && selectedStores.length > 0) {
-      const summaryData = createSummaryData(newSelectedMonths, selectedStores);
+      const summaryData = createSummaryData(newSelectedMonths, selectedStores, updatedData);
       setReportData(summaryData);
     } else {
       setReportData(null);
@@ -404,7 +404,7 @@ function App(): React.ReactNode {
 
   useEffect(() => {
     if (selectedMonths.length > 0 && selectedStores.length > 0 && monthlyData.length > 0) {
-      const summaryData = createSummaryData(selectedMonths, selectedStores);
+      const summaryData = createSummaryData(selectedMonths, selectedStores, monthlyData);
       setReportData(summaryData);
     } else {
       setReportData(null);

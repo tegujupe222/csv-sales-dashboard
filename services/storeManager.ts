@@ -258,8 +258,7 @@ const mergeProductSales = (existing: any, incoming: any) => {
 };
 
 // 複数店舗のデータを統合してサマリーを作成
-export const createSummaryData = (selectedMonths: string[], selectedStores: string[]): Partial<WaldData> => {
-  const monthlyData = loadMonthlyData();
+export const createSummaryData = (selectedMonths: string[], selectedStores: string[], monthlyData: MonthlyData[]): Partial<WaldData> => {
   const selectedData = monthlyData.filter(m => selectedMonths.includes(m.month));
   
   if (selectedData.length === 0) return {};
