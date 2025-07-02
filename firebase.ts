@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAf546IZIDpUkQFJPukXESbIsaZ6dY11fY",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAr546IZIDpUkQFJPukXESbIsaZ6dY11fY",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "iga-factory-1701676663081.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "iga-factory-1701676663081",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "iga-factory-1701676663081.appspot.com",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "iga-factory-1701676663081.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "801031733242",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:801031733242:web:f120c9a12cb56efcf02e43",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-2F5LVR52SE"
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-2F57LVR52E"
 };
 
 // Validate that required config is present
