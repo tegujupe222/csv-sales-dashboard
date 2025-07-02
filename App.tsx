@@ -156,6 +156,16 @@ function App(): React.ReactNode {
     };
   }, [pendingSync, user]);
   
+  // データ更新時のサマリーデータ再計算
+  useEffect(() => {
+    if (selectedMonths.length > 0 && selectedStores.length > 0 && monthlyData.length > 0) {
+      const summaryData = createSummaryData(selectedMonths, selectedStores, monthlyData);
+      setReportData(summaryData);
+    } else {
+      setReportData(null);
+    }
+  }, [selectedMonths, selectedStores, monthlyData]);
+  
   const handleFileProcess = useCallback(async (file: File) => {
     setIsLoading(true);
     setError(null);
@@ -401,15 +411,6 @@ function App(): React.ReactNode {
   }
 
   // ここから下は「ログイン済み」の場合のダッシュボード
-
-  useEffect(() => {
-    if (selectedMonths.length > 0 && selectedStores.length > 0 && monthlyData.length > 0) {
-      const summaryData = createSummaryData(selectedMonths, selectedStores, monthlyData);
-      setReportData(summaryData);
-    } else {
-      setReportData(null);
-    }
-  }, [selectedMonths, selectedStores, monthlyData]);
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
