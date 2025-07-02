@@ -3,7 +3,7 @@ import { getAllUsers, approveUser, deleteUser, AppUser } from '../services/userS
 
 const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
-const AdminDashboard: React.FC<{ currentUserEmail: string | null }> = ({ currentUserEmail }) => {
+const AdminDashboard: React.FC<{ currentUserEmail: string | null; onBack?: () => void; onLogout?: () => void }> = ({ currentUserEmail, onBack, onLogout }) => {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,27 @@ const AdminDashboard: React.FC<{ currentUserEmail: string | null }> = ({ current
 
   return (
     <div style={{ maxWidth: 600, margin: '40px auto', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #0001', padding: 24 }}>
-      <h2>ユーザー管理</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2>ユーザー管理</h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{ background: '#666', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
+            >
+              戻る
+            </button>
+          )}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
+            >
+              ログアウト
+            </button>
+          )}
+        </div>
+      </div>
       {loading ? (
         <p>読み込み中...</p>
       ) : error ? (

@@ -18,10 +18,11 @@ import {
   type MonthlyData 
 } from './services/storeManager';
 import { saveSalesData, getAllSalesData, saveMonthlyData, getMonthlyData, getLatestData } from './services/firestoreService';
+import { saveSharedMonthlyData, getSharedMonthlyData, getLatestSharedData } from './services/sharedDataService';
 import { downloadBackup, loadBackup, restoreBackup, compareBackup } from './services/backupService';
 import type { WaldData, Store } from './types';
 import GoogleLoginButton from './src/components/GoogleLoginButton';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { getUser } from './services/userService';
 import AdminDashboard from './components/AdminDashboard';
 
@@ -47,15 +48,15 @@ function App(): React.ReactNode {
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   
-  // Firestoreデータとローカルストレージの完全同期
+  // 共有データベースとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async (uid: string) => {
     setIsSyncing(true);
     try {
       const localMonthlyData = loadMonthlyData();
-      const firestoreMonthlyData = await getMonthlyData(uid);
+      const sharedMonthlyData = await getSharedMonthlyData();
       
       // 最新データを判定して同期
-      const { data: latestData, source } = getLatestData(localMonthlyData, firestoreMonthlyData);
+      const { data: latestData, source } = getLatestSharedData(localMonthlyData, sharedMonthlyData);
       
       console.log(`データ同期: ${source} データを使用`);
       
@@ -63,10 +64,10 @@ function App(): React.ReactNode {
       localStorage.setItem('monthlyData', JSON.stringify(latestData));
       setMonthlyData(latestData);
       
-      // Firestoreに最新データを保存（ローカルデータが新しい場合）
+      // 共有データベースに最新データを保存（ローカルデータが新しい場合）
       if (source === 'local' || source === 'merged') {
-        await saveMonthlyData(uid, latestData);
-        console.log('Firestoreに最新データを保存しました');
+        await saveSharedMonthlyData(latestData);
+        console.log('共有データベースに最新データを保存しました');
       }
       
       // 店舗データも同期
@@ -186,20 +187,16 @@ function App(): React.ReactNode {
         const updatedData = addOrUpdateStoreData(result.month, selectedStore.id, result, file.name);
         setMonthlyData(updatedData);
         
-        // ログインユーザーがいる場合はFirestoreにも保存
+        // ログインユーザーがいる場合は共有データベースにも保存
         if (user) {
           if (isOnline) {
             try {
-              await saveSalesData({
-                uid: user.uid,
-                storeCode: selectedStore.code,
-                month: result.month,
-                salesData: result.cafe // カフェ売上データを保存
-              });
-              console.log('Firestoreにデータを保存しました');
-            } catch (firestoreError) {
-              console.error('Firestore保存エラー:', firestoreError);
-              // Firestore保存に失敗してもローカル保存は成功しているので、エラーは表示しない
+              // 共有データベースに保存（全ユーザーで共有）
+              await saveSharedMonthlyData(updatedData);
+              console.log('共有データベースにデータを保存しました');
+            } catch (sharedDataError) {
+              console.error('共有データベース保存エラー:', sharedDataError);
+              // 保存に失敗してもローカル保存は成功しているので、エラーは表示しない
               setPendingSync(true);
             }
           } else {
@@ -284,6 +281,16 @@ function App(): React.ReactNode {
     setSelectedStoreId(null);
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      // ログアウト後は自動的にログイン画面に戻る
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+    }
+  }, []);
+
   // バックアップダウンロード
   const handleBackupDownload = useCallback(() => {
     try {
@@ -329,7 +336,26 @@ function App(): React.ReactNode {
 
   // 管理者ダッシュボード表示
   if (!isAuthLoading && user && isApproved && showAdmin && user.email === ADMIN_EMAIL) {
-    return <AdminDashboard currentUserEmail={user.email} />;
+    return <AdminDashboard currentUserEmail={user.email} onBack={() => setShowAdmin(false)} onLogout={handleLogout} />;
+  }
+
+  // 承認待ち画面
+  if (!isAuthLoading && user && isApproved === false) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="bg-white p-8 rounded shadow-md text-center">
+          <h2 className="text-2xl font-bold mb-4">管理者の承認待ちです</h2>
+          <p className="mb-4 text-gray-600">承認されるまでお待ちください。</p>
+          <p className="text-sm text-gray-500 mb-6">メールアドレス: {user.email}</p>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            ログアウト
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (isAuthLoading) {
@@ -412,6 +438,12 @@ function App(): React.ReactNode {
                     {isSyncing ? '同期中...' : '同期'}
                   </button>
                 )}
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  ログアウト
+                </button>
               </div>
             </div>
           </div>

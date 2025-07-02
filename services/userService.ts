@@ -14,11 +14,13 @@ export async function registerUser({ uid, email, displayName }: { uid: string, e
   const userRef = doc(db, 'users', uid);
   const snap = await getDoc(userRef);
   if (!snap.exists()) {
+    // 管理者は自動で承認
+    const isAdmin = email === 'igafactory2023@gmail.com';
     await setDoc(userRef, {
       uid,
       email,
       displayName,
-      approved: false,
+      approved: isAdmin,
       createdAt: Timestamp.now()
     });
   }
