@@ -56,37 +56,30 @@ function App(): React.ReactNode {
   const syncDataWithFirestore = useCallback(async (uid: string) => {
     setIsSyncing(true);
     try {
-      const localMonthlyData = loadMonthlyData();
+      // shared_dataから最新データを取得
       const sharedMonthlyData = await getSharedMonthlyData();
-      
-      // 最新データを判定して同期
-      const { data: latestData, source } = getLatestSharedData(localMonthlyData, sharedMonthlyData);
-      
-      console.log(`データ同期: ${source} データを使用`);
-      
-      // 最新データをローカルストレージに保存
-      localStorage.setItem('monthlyData', JSON.stringify(latestData));
-      setMonthlyData(latestData);
-      
-      // 共有データベースに最新データを保存（ローカルデータが新しい場合）
-      if (source === 'local' || source === 'merged') {
-        await saveSharedMonthlyData(latestData);
-        console.log('共有データベースに最新データを保存しました');
+      const sharedStores = await (await import('./services/sharedDataService')).getSharedStoreData();
+
+      // 取得できたらローカルストレージを上書き
+      if (sharedMonthlyData) {
+        localStorage.setItem('monthlyData', JSON.stringify(sharedMonthlyData));
+        setMonthlyData(sharedMonthlyData);
+      } else {
+        localStorage.setItem('monthlyData', JSON.stringify([]));
+        setMonthlyData([]);
       }
-      
-      // 店舗データも同期
-      const loadedStores = loadStores();
-      if (loadedStores.length > 0) {
-        setStores(loadedStores);
-        
-        // デフォルトで最初の店舗を選択（まだ選択されていない場合）
-        if (selectedStores.length === 0) {
-          setSelectedStores([loadedStores[0].id]);
-          setSelectedStoreId(loadedStores[0].id);
+      if (sharedStores) {
+        localStorage.setItem('wald_stores', JSON.stringify(sharedStores));
+        setStores(sharedStores);
+        if (sharedStores.length > 0 && selectedStores.length === 0) {
+          setSelectedStores([sharedStores[0].id]);
+          setSelectedStoreId(sharedStores[0].id);
         }
+      } else {
+        localStorage.setItem('wald_stores', JSON.stringify([]));
+        setStores([]);
       }
-      
-      console.log('完全同期が完了しました');
+      console.log('shared_dataから完全同期が完了しました');
     } catch (error) {
       console.error('データ同期エラー:', error);
     } finally {
@@ -135,21 +128,6 @@ function App(): React.ReactNode {
       setIsApproved(null);
     }
   }, [syncDataWithFirestore]);
-  
-  // 初期化時にローカルストレージからデータを読み込み
-  useEffect(() => {
-    const loadedStores = loadStores();
-    setStores(loadedStores);
-    
-    const loadedMonthlyData = loadMonthlyData();
-    setMonthlyData(loadedMonthlyData);
-    
-    // デフォルトで最初の店舗を選択
-    if (loadedStores.length > 0 && selectedStores.length === 0) {
-      setSelectedStores([loadedStores[0].id]);
-      setSelectedStoreId(loadedStores[0].id);
-    }
-  }, []);
   
   // ネットワーク状態の監視
   useEffect(() => {
