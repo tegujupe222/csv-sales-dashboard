@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Store } from '../types';
 import { addStore, updateStore, deleteStore } from '../services/storeManager';
+import { saveSharedStoreData } from '../services/sharedDataService';
 import { TrashIcon, PlusIcon, PencilIcon } from './icons';
 
 interface StoreManagerProps {
@@ -25,14 +26,15 @@ export const StoreManager: React.FC<StoreManagerProps> = ({ stores, onStoresChan
     setIsOpen(true);
   };
 
-  const handleDeleteStore = (storeId: string) => {
+  const handleDeleteStore = async (storeId: string) => {
     if (confirm('この店舗を削除しますか？関連するデータも削除されます。')) {
       const newStores = deleteStore(storeId);
       onStoresChange(newStores);
+      await saveSharedStoreData(newStores);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim() || !formData.code.trim()) {
@@ -40,9 +42,10 @@ export const StoreManager: React.FC<StoreManagerProps> = ({ stores, onStoresChan
       return;
     }
 
+    let newStores: Store[];
     if (editingStore) {
       // 店舗を更新
-      const newStores = updateStore(editingStore.id, {
+      newStores = updateStore(editingStore.id, {
         name: formData.name.trim(),
         code: formData.code.trim(),
       });
@@ -54,9 +57,10 @@ export const StoreManager: React.FC<StoreManagerProps> = ({ stores, onStoresChan
         name: formData.name.trim(),
         code: formData.code.trim(),
       };
-      const newStores = addStore(newStore);
+      newStores = addStore(newStore);
       onStoresChange(newStores);
     }
+    await saveSharedStoreData(newStores);
 
     setIsOpen(false);
     setFormData({ name: '', code: '' });
