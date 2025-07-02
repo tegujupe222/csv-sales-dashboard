@@ -402,6 +402,15 @@ function App(): React.ReactNode {
 
   // ここから下は「ログイン済み」の場合のダッシュボード
 
+  useEffect(() => {
+    if (selectedMonths.length > 0 && selectedStores.length > 0 && monthlyData.length > 0) {
+      const summaryData = createSummaryData(selectedMonths, selectedStores);
+      setReportData(summaryData);
+    } else {
+      setReportData(null);
+    }
+  }, [selectedMonths, selectedStores, monthlyData]);
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       <Sidebar isAdmin={isAdmin} onAdminDashboard={() => setShowAdmin(true)} />
