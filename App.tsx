@@ -22,6 +22,10 @@ import { downloadBackup, loadBackup, restoreBackup, compareBackup } from './serv
 import type { WaldData, Store } from './types';
 import GoogleLoginButton from './src/components/GoogleLoginButton';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getUser } from './services/userService';
+import AdminDashboard from './components/AdminDashboard';
+
+const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
 function App(): React.ReactNode {
   const [reportData, setReportData] = useState<Partial<WaldData> | null>(null);
@@ -40,6 +44,8 @@ function App(): React.ReactNode {
   const [pendingSync, setPendingSync] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
+  const [isApproved, setIsApproved] = useState<boolean | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
   
   // Firestoreデータとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async (uid: string) => {
@@ -91,22 +97,26 @@ function App(): React.ReactNode {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
           setUser(user);
           setIsAuthLoading(false);
-          
-          // ユーザーがログインした場合、Firestoreからデータを読み込む
+
           if (user) {
+            // Firestoreから承認状態を取得
+            const appUser = await getUser(user.uid);
+            setIsApproved(appUser?.approved ?? false);
             await syncDataWithFirestore(user.uid);
+          } else {
+            setIsApproved(null);
           }
         });
-        
         return () => unsubscribe();
       } else {
-        // Firebase is not available
         setIsAuthLoading(false);
+        setIsApproved(null);
         console.log('Firebase authentication not available');
       }
     } catch (error) {
       console.error('Firebase auth error:', error);
       setIsAuthLoading(false);
+      setIsApproved(null);
     }
   }, [syncDataWithFirestore]);
   
@@ -317,6 +327,11 @@ function App(): React.ReactNode {
     }
   }, [user]);
 
+  // 管理者ダッシュボード表示
+  if (!isAuthLoading && user && isApproved && showAdmin && user.email === ADMIN_EMAIL) {
+    return <AdminDashboard currentUserEmail={user.email} />;
+  }
+
   if (isAuthLoading) {
     return <div>認証状態を確認中...</div>;
   }
@@ -506,6 +521,15 @@ function App(): React.ReactNode {
             </div>
           </div>
         </div>
+      )}
+      {/* 既存の管理者用ボタンを追加 */}
+      {user && isApproved && user.email === ADMIN_EMAIL && (
+        <button
+          style={{ position: 'fixed', top: 10, right: 10, zIndex: 1000, background: '#222', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
+          onClick={() => setShowAdmin(true)}
+        >
+          ユーザー管理
+        </button>
       )}
     </div>
   );
