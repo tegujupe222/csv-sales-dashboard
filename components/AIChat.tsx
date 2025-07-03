@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { extractTimeSeriesData } from '../services/dataManager';
+import { analyzeWithOpenAI } from '../services/openaiService';
 import type { TimeSeriesData, MonthlyData } from '../services/dataManager';
 
 interface ChatMessage {
@@ -83,48 +84,11 @@ export const AIChat: React.FC<AIChatProps> = ({
     return dataText;
   };
 
-  // AIに質問を送信
+  // AIに質問を送信（OpenAI版）
   const sendMessageToAI = async (userMessage: string): Promise<string> => {
     const salesDataText = formatSalesDataForAI();
-    
-    const prompt = `あなたは売上データ分析の専門家です。以下の売上データを分析して、ユーザーの質問に経営に役立つアドバイスを日本語で回答してください。
-
-売上データ:
-${salesDataText}
-
-ユーザーの質問: ${userMessage}
-
-回答のポイント:
-1. データに基づいた具体的な分析
-2. 経営改善のためのアドバイス
-3. 分かりやすい日本語での説明
-4. 必要に応じて数値やパーセンテージを含める
-5. 前向きで建設的な提案
-
-回答:`;
-
-    const body = {
-      contents: [
-        {
-          parts: [
-            { text: prompt }
-          ]
-        }
-      ]
-    };
-
-    const res = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-      throw new Error('AI API request failed');
-    }
-
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '申し訳ございません。回答を生成できませんでした。';
+    const systemPrompt = `あなたは売上データ分析の専門家です。以下の売上データを分析して、ユーザーの質問に経営に役立つアドバイスを日本語で回答してください。\n\n売上データ:\n${salesDataText}`;
+    return await analyzeWithOpenAI(userMessage, systemPrompt);
   };
 
   // メッセージ送信
