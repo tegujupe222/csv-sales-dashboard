@@ -674,6 +674,13 @@ function App(): React.ReactNode {
                 </div>
               )}
 
+              {activeSection === 'upload' && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">データアップロード</h2>
+                  <FileUpload onFileProcess={handleFileProcess} />
+                </div>
+              )}
+
               {activeSection === 'settings' && (
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">設定</h2>
@@ -803,8 +810,6 @@ function App(): React.ReactNode {
         <ClientManager />
       )}
 
-      {/* CSVアップロードUI */}
-      <FileUpload onFileProcess={handleFileProcess} />
       {/* AI解析中・プレビューUI */}
       {aiLoading && (
         <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded shadow text-center text-lg text-blue-700">AI解析中...しばらくお待ちください</div>
