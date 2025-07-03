@@ -6,7 +6,10 @@ import {
   getDocs,
   Timestamp,
   query,
-  orderBy
+  orderBy,
+  updateDoc,
+  doc,
+  deleteDoc
 } from 'firebase/firestore';
 
 interface Client {
@@ -20,6 +23,9 @@ const ClientManager: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [saving, setSaving] = useState<string | null>(null);
 
   // クライアント一覧を取得
   useEffect(() => {
@@ -58,8 +64,45 @@ const ClientManager: React.FC = () => {
     }
   };
 
+  // クライアント編集開始
+  const handleEdit = (client: Client) => {
+    setEditingId(client.id);
+    setEditingName(client.name);
+  };
+
+  // クライアント名保存
+  const handleSaveEdit = async (id: string) => {
+    setSaving(id);
+    try {
+      const clientRef = doc(db, 'clients', id);
+      await updateDoc(clientRef, { name: editingName });
+      setClients(clients => clients.map(c => c.id === id ? { ...c, name: editingName } : c));
+      setEditingId(null);
+      setEditingName('');
+      setError(null);
+    } catch (err) {
+      setError('クライアント名の更新に失敗しました');
+    }
+    setSaving(null);
+  };
+
+  // クライアント削除
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('本当に削除しますか？この操作は元に戻せません。')) return;
+    setSaving(id);
+    try {
+      const clientRef = doc(db, 'clients', id);
+      await deleteDoc(clientRef);
+      setClients(clients => clients.filter(c => c.id !== id));
+      setError(null);
+    } catch (err) {
+      setError('クライアントの削除に失敗しました');
+    }
+    setSaving(null);
+  };
+
   return (
-    <div style={{ maxWidth: 400, margin: '0 auto', padding: 24 }}>
+    <div style={{ maxWidth: 500, margin: '0 auto', padding: 24 }}>
       <h2>クライアント管理</h2>
       <form onSubmit={handleAddClient} style={{ marginBottom: 24 }}>
         <input
@@ -80,7 +123,35 @@ const ClientManager: React.FC = () => {
       ) : (
         <ul>
           {clients.map((client) => (
-            <li key={client.id}>{client.name}</li>
+            <li key={client.id} style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+              {editingId === client.id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={e => setEditingName(e.target.value)}
+                    style={{ padding: 4, marginRight: 8 }}
+                  />
+                  <button onClick={() => handleSaveEdit(client.id)} disabled={saving === client.id} style={{ marginRight: 8 }}>
+                    保存
+                  </button>
+                  <button onClick={() => { setEditingId(null); setEditingName(''); }}>
+                    キャンセル
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span style={{ flex: 1 }}>{client.name}</span>
+                  <button onClick={() => handleEdit(client)} style={{ marginLeft: 8 }}>
+                    編集
+                  </button>
+                  <button onClick={() => handleDelete(client.id)} disabled={saving === client.id} style={{ marginLeft: 8, color: 'red' }}>
+                    削除
+                  </button>
+                </>
+              )}
+              {saving === client.id && <span style={{ marginLeft: 8, color: '#888' }}>保存中...</span>}
+            </li>
           ))}
         </ul>
       )}

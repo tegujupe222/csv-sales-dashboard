@@ -27,6 +27,10 @@ import RegistrationModal from './components/RegistrationModal';
 import ApprovalPendingScreen from './components/ApprovalPendingScreen';
 import ClientManager from './components/ClientManager';
 import UserManager from './components/UserManager';
+import { analyzeCsvWithGemini } from './services/geminiService';
+import Papa from 'papaparse';
+import { AIDashboard } from './components/DynamicVisualization';
+import { AIChat } from './components/AIChat';
 
 const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
@@ -56,6 +60,11 @@ function App(): React.ReactNode {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showClientManager, setShowClientManager] = useState(false);
   const [showUserManager, setShowUserManager] = useState(false);
+  const [aiPreview, setAiPreview] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiDashboard, setAiDashboard] = useState<any>(null);
+  const [showAIChat, setShowAIChat] = useState(false);
   
   // 共有データベースとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async () => {
@@ -176,6 +185,9 @@ function App(): React.ReactNode {
   }, [selectedMonths, selectedStores, monthlyData]);
   
   const handleFileProcess = useCallback(async (file: File) => {
+    setAiPreview(null);
+    setAiError(null);
+    setAiLoading(true);
     setIsLoading(true);
     setError(null);
     setLastFileName(file.name);
@@ -235,6 +247,7 @@ function App(): React.ReactNode {
       console.error(e);
     } finally {
       setIsLoading(false);
+      setAiLoading(false);
     }
   }, [selectedMonths, selectedStores, stores, user]);
 
@@ -421,6 +434,19 @@ function App(): React.ReactNode {
 
   // ここから下は「ログイン済み」の場合のダッシュボード
 
+  const handleAiConfirm = () => {
+    // AI提案内容をパースしてダッシュボード生成
+    if (!aiPreview) return;
+    try {
+      // 返答がJSONの場合のみ対応
+      const json = JSON.parse(aiPreview);
+      setAiDashboard(json);
+      setAiPreview(null);
+    } catch (e) {
+      alert('AI返答がJSON形式ではありません。');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       {/* モバイル用オーバーレイ */}
@@ -470,14 +496,25 @@ function App(): React.ReactNode {
               <LogoIcon className="h-8 w-8 text-primary" />
               <h1 className="text-xl lg:text-2xl font-bold text-gray-800">EVEN View</h1>
             </div>
-            {reportData && (
+            <div className="flex items-center space-x-3">
+              {reportData && (
+                <button
+                  onClick={handleReset}
+                  className="px-3 py-2 lg:px-4 lg:py-2 text-sm lg:text-base bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-200"
+                >
+                  新規レポート開始
+                </button>
+              )}
               <button
-                onClick={handleReset}
-                className="px-3 py-2 lg:px-4 lg:py-2 text-sm lg:text-base bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-200"
+                onClick={() => setShowAIChat(true)}
+                className="px-3 py-2 lg:px-4 lg:py-2 text-sm lg:text-base bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 transition duration-200 flex items-center space-x-2"
               >
-                新規レポート開始
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span>AIチャット</span>
               </button>
-            )}
+            </div>
           </div>
         </header>
 
@@ -763,6 +800,42 @@ function App(): React.ReactNode {
       {/* 管理者のみクライアント管理画面を表示 */}
       {isAdmin && showClientManager && (
         <ClientManager />
+      )}
+
+      {/* CSVアップロードUI */}
+      <FileUpload onFileProcess={handleFileProcess} />
+      {/* AI解析中・プレビューUI */}
+      {aiLoading && (
+        <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded shadow text-center text-lg text-blue-700">AI解析中...しばらくお待ちください</div>
+      )}
+      {aiError && (
+        <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded shadow text-center text-lg text-red-700">{aiError}</div>
+      )}
+      {aiPreview && (
+        <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded shadow">
+          <h3 className="text-xl font-bold mb-2">AI提案内容（集計・可視化案プレビュー）</h3>
+          <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto mb-4" style={{ whiteSpace: 'pre-wrap' }}>{aiPreview}</pre>
+          <button onClick={handleAiConfirm} className="px-6 py-2 bg-primary text-white rounded font-semibold hover:bg-primary-dark transition">この内容でダッシュボード作成</button>
+        </div>
+      )}
+
+      {/* AI自動生成ダッシュボード */}
+      {aiDashboard && (
+        <AIDashboard 
+          aiResponse={aiDashboard} 
+          onClose={() => setAiDashboard(null)} 
+        />
+      )}
+
+      {/* AIチャット */}
+      {showAIChat && (
+        <AIChat
+          monthlyData={monthlyData}
+          selectedMonths={selectedMonths}
+          selectedStores={selectedStores}
+          clientId={user?.uid} // ユーザーIDをクライアントIDとして使用
+          onClose={() => setShowAIChat(false)}
+        />
       )}
     </div>
   );
