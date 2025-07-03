@@ -80,6 +80,7 @@ ${csvSample}`;
   }
 
   const data = await res.json();
+  console.log(data);
   // Geminiの返答はdata.candidates[0].content.parts[0].textに入っていることが多い
   return data.candidates?.[0]?.content?.parts?.[0]?.text || data;
 } 
