@@ -14,12 +14,13 @@ import {
 interface SidebarProps {
   isAdmin?: boolean;
   onAdminDashboard?: () => void;
+  onClientManager?: () => void;
   onClose?: () => void;
   onNavigate?: (section: string) => void;
   activeSection?: string;
 }
 
-export const Sidebar = ({ isAdmin, onAdminDashboard, onClose, onNavigate, activeSection = 'dashboard' }: SidebarProps): React.ReactNode => {
+export const Sidebar = ({ isAdmin, onAdminDashboard, onClientManager, onClose, onNavigate, activeSection = 'dashboard' }: SidebarProps): React.ReactNode => {
   return (
     <div className="w-64 h-full bg-dark-sidebar text-white flex flex-col">
       <div className="flex items-center justify-between h-20 shadow-md px-4">
@@ -119,6 +120,15 @@ export const Sidebar = ({ isAdmin, onAdminDashboard, onClose, onNavigate, active
           >
             <UserGroupIcon className="h-5 w-5 lg:h-6 lg:w-6 mr-3" />
             ユーザー管理
+          </button>
+        )}
+        {isAdmin && onClientManager && (
+          <button
+            onClick={onClientManager}
+            className="flex items-center w-full px-4 py-3 text-left text-gray-300 hover:bg-blue-600 hover:text-white rounded-md transition-colors duration-200 bg-blue-500 mt-2 font-bold text-sm lg:text-base"
+          >
+            <BuildingIcon className="h-5 w-5 lg:h-6 lg:w-6 mr-3" />
+            クライアント管理
           </button>
         )}
       </nav>

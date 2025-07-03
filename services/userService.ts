@@ -6,6 +6,7 @@ export interface AppUser {
   email: string;
   displayName: string;
   approved: boolean;
+  role: string; // 'admin' | 'user'
   createdAt: any;
 }
 
@@ -21,6 +22,7 @@ export async function registerUser({ uid, email, displayName }: { uid: string, e
       email,
       displayName,
       approved: isAdmin,
+      role: isAdmin ? 'admin' : 'user',
       createdAt: Timestamp.now()
     });
   }
@@ -53,4 +55,17 @@ export async function approveUser(uid: string) {
 export async function deleteUser(uid: string) {
   const userRef = doc(db, 'users', uid);
   await deleteDoc(userRef);
+}
+
+// ユーザーをクライアントに割り当て
+export async function assignUserToClient(uid: string, clientId: string) {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, { clientId });
+}
+
+// クライアント一覧を取得
+export async function getAllClients(): Promise<{ id: string; name: string }[]> {
+  const clientsCol = collection(db, 'clients');
+  const snap = await getDocs(clientsCol);
+  return snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as { name: string }) }));
 } 
