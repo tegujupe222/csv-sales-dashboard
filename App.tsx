@@ -25,6 +25,8 @@ import { getUser, registerUser } from './services/userService';
 import AdminDashboard from './components/AdminDashboard';
 import RegistrationModal from './components/RegistrationModal';
 import ApprovalPendingScreen from './components/ApprovalPendingScreen';
+import ClientManager from './components/ClientManager';
+import UserManager from './components/UserManager';
 
 const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
@@ -51,6 +53,9 @@ function App(): React.ReactNode {
   const [pendingRegistration, setPendingRegistration] = useState<{email: string, displayName: string} | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [showClientManager, setShowClientManager] = useState(false);
+  const [showUserManager, setShowUserManager] = useState(false);
   
   // 共有データベースとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async () => {
@@ -97,35 +102,39 @@ function App(): React.ReactNode {
           setIsAuthLoading(false);
 
           if (user) {
-            // Firestoreから承認状態を取得
+            // Firestoreから承認状態とroleを取得
             const appUser = await getUser(user.uid);
 
             if (!appUser) {
-              // 新規ユーザーの場合、登録モーダルを必ず表示
               setPendingRegistration({
                 email: user.email || '',
                 displayName: user.displayName || ''
               });
               setShowRegistrationModal(true);
-              setIsApproved(false); // 承認待ち状態に明示的にする
+              setIsApproved(false);
+              setUserRole(null);
             } else {
               setIsApproved(appUser.approved);
+              setUserRole(appUser.role || null);
               await syncDataWithFirestore();
             }
           } else {
             setIsApproved(null);
+            setUserRole(null);
           }
         });
         return () => unsubscribe();
       } else {
         setIsAuthLoading(false);
         setIsApproved(null);
+        setUserRole(null);
         console.log('Firebase authentication not available');
       }
     } catch (error) {
       console.error('Firebase auth error:', error);
       setIsAuthLoading(false);
       setIsApproved(null);
+      setUserRole(null);
     }
   }, [syncDataWithFirestore]);
   
@@ -363,7 +372,7 @@ function App(): React.ReactNode {
   }, [user]);
 
   // 管理者判定
-  const isAdmin: boolean = !!user && user.email === ADMIN_EMAIL;
+  const isAdmin: boolean = userRole === 'admin';
 
   // 管理者ダッシュボード表示
   if (!isAuthLoading && user && isApproved && showAdmin && isAdmin) {
@@ -426,11 +435,20 @@ function App(): React.ReactNode {
       <div className={`fixed lg:static inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
         <Sidebar 
           isAdmin={isAdmin} 
-          onAdminDashboard={() => setShowAdmin(true)} 
+          onAdminDashboard={() => {
+            setShowUserManager(true);
+            setShowClientManager(false);
+          }}
+          onClientManager={() => {
+            setShowClientManager(true);
+            setShowUserManager(false);
+          }}
           onClose={() => setIsSidebarOpen(false)}
           onNavigate={(section) => {
             setActiveSection(section);
-            setIsSidebarOpen(false); // モバイルではサイドバーを閉じる
+            setIsSidebarOpen(false);
+            setShowUserManager(false);
+            setShowClientManager(false);
           }}
           activeSection={activeSection}
         />
@@ -736,6 +754,15 @@ function App(): React.ReactNode {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 管理者のみユーザー管理画面を表示 */}
+      {isAdmin && showUserManager && (
+        <UserManager />
+      )}
+      {/* 管理者のみクライアント管理画面を表示 */}
+      {isAdmin && showClientManager && (
+        <ClientManager />
       )}
     </div>
   );
