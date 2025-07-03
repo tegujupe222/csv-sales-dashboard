@@ -32,6 +32,7 @@ import { analyzeCsvWithGemini } from './services/geminiService';
 import Papa from 'papaparse';
 import { AIDashboard } from './components/DynamicVisualization';
 import { AIChat } from './components/AIChat';
+import { analyzeMonthlyReportWithOpenAI } from './services/openaiService';
 
 const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
@@ -66,6 +67,9 @@ function App(): React.ReactNode {
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiDashboard, setAiDashboard] = useState<any>(null);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [aiReport, setAiReport] = useState<any>(null);
+  const [aiReportLoading, setAiReportLoading] = useState(false);
+  const [aiReportError, setAiReportError] = useState<string | null>(null);
   
   // 共有データベースとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async () => {
@@ -185,6 +189,25 @@ function App(): React.ReactNode {
     }
   }, [selectedMonths, selectedStores, monthlyData]);
   
+  // レポート画面でAI要約・グラフを取得
+  useEffect(() => {
+    if (activeSection === 'reports' && reportData && selectedMonths.length > 0) {
+      setAiReport(null);
+      setAiReportLoading(true);
+      setAiReportError(null);
+      analyzeMonthlyReportWithOpenAI(selectedMonths[0], reportData)
+        .then((result) => {
+          try {
+            setAiReport(JSON.parse(result));
+          } catch {
+            setAiReport(result);
+          }
+        })
+        .catch((e) => setAiReportError(e.message || 'AI要約取得に失敗しました'))
+        .finally(() => setAiReportLoading(false));
+    }
+  }, [activeSection, reportData, selectedMonths]);
+
   const handleFileProcess = useCallback(async (file: File) => {
     setAiPreview(null);
     setAiError(null);
@@ -601,10 +624,6 @@ function App(): React.ReactNode {
                     />
                   </div>
                   
-                  {!reportData && (
-                    <FileUpload onFileProcess={handleFileProcess} />
-                  )}
-
                   {reportData && (
                     <Dashboard data={reportData} onNewUpload={handleFileProcess} lastFileName={lastFileName} />
                   )}
@@ -628,6 +647,15 @@ function App(): React.ReactNode {
               {activeSection === 'reports' && (
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">レポート</h2>
+                  {/* AI要約・グラフ表示 */}
+                  {aiReportLoading && <div className="mb-4 text-blue-600">AI要約・グラフを生成中...</div>}
+                  {aiReportError && <div className="mb-4 text-red-600">{aiReportError}</div>}
+                  {aiReport && (
+                    <div className="mb-6 p-4 bg-blue-50 rounded">
+                      <h3 className="text-lg font-bold mb-2">AI要約・インサイト・推奨グラフ</h3>
+                      <pre className="bg-white p-2 rounded text-xs overflow-x-auto" style={{ whiteSpace: 'pre-wrap' }}>{typeof aiReport === 'string' ? aiReport : JSON.stringify(aiReport, null, 2)}</pre>
+                    </div>
+                  )}
                   {reportData ? (
                     <Dashboard data={reportData} onNewUpload={handleFileProcess} lastFileName={lastFileName} />
                   ) : (

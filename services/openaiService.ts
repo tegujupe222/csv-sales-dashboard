@@ -33,4 +33,10 @@ export async function analyzeWithOpenAI(userMessage: string, systemPrompt = 'あ
   const data = await res.json();
   // ChatGPTの返答はdata.choices[0].message.content
   return data.choices?.[0]?.message?.content || data;
+}
+
+export async function analyzeMonthlyReportWithOpenAI(month: string, data: any) {
+  const userMessage = `以下は${month}の売上データです。売上・客数・カテゴリ別売上などを要約し、経営に役立つインサイトや推奨グラフ（グラフ種別・タイトル・x軸・y軸・系列名など）をJSON形式で返してください。\n---\n${JSON.stringify(data, null, 2)}`;
+  const systemPrompt = 'あなたは売上データ分析の専門家です。要約・インサイト・推奨グラフをJSONで返してください。';
+  return await analyzeWithOpenAI(userMessage, systemPrompt);
 } 
