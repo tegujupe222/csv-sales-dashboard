@@ -33,6 +33,7 @@ import Papa from 'papaparse';
 import { AIDashboard } from './components/DynamicVisualization';
 import { AIChat } from './components/AIChat';
 import { analyzeMonthlyReportWithOpenAI } from './services/openaiService';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 
 const ADMIN_EMAIL = 'igafactory2023@gmail.com';
 
@@ -653,7 +654,45 @@ function App(): React.ReactNode {
                   {aiReport && (
                     <div className="mb-6 p-4 bg-blue-50 rounded">
                       <h3 className="text-lg font-bold mb-2">AI要約・インサイト・推奨グラフ</h3>
-                      <pre className="bg-white p-2 rounded text-xs overflow-x-auto" style={{ whiteSpace: 'pre-wrap' }}>{typeof aiReport === 'string' ? aiReport : JSON.stringify(aiReport, null, 2)}</pre>
+                      {/* summary */}
+                      {aiReport.summary && (
+                        <div className="mb-2 text-base text-gray-800">
+                          <div>月: {aiReport.summary.month}</div>
+                          <div>総売上: {aiReport.summary.totalSales?.toLocaleString()}円</div>
+                          <div>総客数: {aiReport.summary.totalGuests?.toLocaleString()}人</div>
+                          <div>平均客単価: {Math.round(aiReport.summary.avgSpend).toLocaleString()}円</div>
+                          <div>売上トップカテゴリ: {aiReport.summary.topCategory}</div>
+                        </div>
+                      )}
+                      {/* insights */}
+                      {aiReport.insights && Array.isArray(aiReport.insights) && (
+                        <ul className="mb-2 list-disc pl-5 text-gray-700">
+                          {aiReport.insights.map((insight: string, idx: number) => (
+                            <li key={idx}>{insight}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {/* 推奨グラフ */}
+                      {aiReport.recommendations && aiReport.recommendations.graph && aiReport.recommendations.graph.type === 'bar' && (
+                        <div className="my-4">
+                          <h4 className="font-semibold mb-2">{aiReport.recommendations.graph.title || '推奨グラフ'}</h4>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={aiReport.recommendations.graph.series.map((s: any) => ({ name: s.name, 売上: s.data[0] }))}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <Tooltip />
+                              <Legend />
+                              <Bar dataKey="売上" fill="#8884d8" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                      {/* JSON開閉式 */}
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs text-gray-500">AI生データ(JSON)</summary>
+                        <pre className="bg-white p-2 rounded text-xs overflow-x-auto" style={{ whiteSpace: 'pre-wrap' }}>{typeof aiReport === 'string' ? aiReport : JSON.stringify(aiReport, null, 2)}</pre>
+                      </details>
                     </div>
                   )}
                   {reportData ? (
