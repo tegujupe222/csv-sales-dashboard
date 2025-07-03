@@ -6,19 +6,17 @@ import { Spinner } from './components/Spinner';
 import { MonthSelector } from './components/MonthSelector';
 import { StoreManager } from './components/StoreManager';
 import { StoreSelector } from './components/StoreSelector';
-import { LogoIcon } from './components/icons';
+import { LogoIcon, CloudArrowUpIcon } from './components/icons';
 import { processCsvFile } from './services/csvProcessor';
 import { 
   loadStores,
-  loadMonthlyData,
   addOrUpdateStoreData,
   createSummaryData,
   deleteStoreData,
   clearAllData,
   type MonthlyData 
 } from './services/storeManager';
-import { saveSalesData, getAllSalesData, saveMonthlyData, getMonthlyData, getLatestData } from './services/firestoreService';
-import { saveSharedMonthlyData, getSharedMonthlyData, getLatestSharedData } from './services/sharedDataService';
+import { saveSharedMonthlyData, getSharedMonthlyData } from './services/sharedDataService';
 import { downloadBackup, loadBackup, restoreBackup, compareBackup } from './services/backupService';
 import type { WaldData, Store } from './types';
 import GoogleLoginButton from './src/components/GoogleLoginButton';
@@ -51,9 +49,11 @@ function App(): React.ReactNode {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState<{email: string, displayName: string} | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('dashboard');
   
   // 共有データベースとローカルストレージの完全同期
-  const syncDataWithFirestore = useCallback(async (uid: string) => {
+  const syncDataWithFirestore = useCallback(async () => {
     setIsSyncing(true);
     try {
       // shared_dataから最新データを取得
@@ -110,7 +110,7 @@ function App(): React.ReactNode {
               setIsApproved(false); // 承認待ち状態に明示的にする
             } else {
               setIsApproved(appUser.approved);
-              await syncDataWithFirestore(user.uid);
+              await syncDataWithFirestore();
             }
           } else {
             setIsApproved(null);
@@ -137,7 +137,7 @@ function App(): React.ReactNode {
       
       // オフライン中に変更があった場合は同期を実行
       if (pendingSync && user) {
-        syncDataWithFirestore(user.uid);
+        syncDataWithFirestore();
         setPendingSync(false);
       }
     };
@@ -400,10 +400,10 @@ function App(): React.ReactNode {
   if (!user) {
     // ログイン画面
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="bg-white p-8 rounded shadow-md text-center">
-          <h2 className="text-2xl font-bold mb-4">ログイン</h2>
-          <p className="mb-4 text-gray-600">Googleアカウントでログインしてください</p>
+      <div className="flex items-center justify-center h-screen bg-gray-100 p-4">
+        <div className="bg-white p-6 lg:p-8 rounded shadow-md text-center w-full max-w-md">
+          <h2 className="text-xl lg:text-2xl font-bold mb-4">ログイン</h2>
+          <p className="mb-4 text-gray-600 text-sm lg:text-base">Googleアカウントでログインしてください</p>
           <GoogleLoginButton />
         </div>
       </div>
@@ -414,18 +414,48 @@ function App(): React.ReactNode {
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
-      <Sidebar isAdmin={isAdmin} onAdminDashboard={() => setShowAdmin(true)} />
+      {/* モバイル用オーバーレイ */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
+      {/* サイドバー */}
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
+        <Sidebar 
+          isAdmin={isAdmin} 
+          onAdminDashboard={() => setShowAdmin(true)} 
+          onClose={() => setIsSidebarOpen(false)}
+          onNavigate={(section) => {
+            setActiveSection(section);
+            setIsSidebarOpen(false); // モバイルではサイドバーを閉じる
+          }}
+          activeSection={activeSection}
+        />
+      </div>
+      
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-md z-10">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center space-x-3">
+              {/* モバイル用ハンバーガーメニュー */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
               <LogoIcon className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-gray-800">EVEN View</h1>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-800">EVEN View</h1>
             </div>
             {reportData && (
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-200"
+                className="px-3 py-2 lg:px-4 lg:py-2 text-sm lg:text-base bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-200"
               >
                 新規レポート開始
               </button>
@@ -433,10 +463,10 @@ function App(): React.ReactNode {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {/* 認証状態の表示 */}
           <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               <div>
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -444,7 +474,7 @@ function App(): React.ReactNode {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">ログイン中</p>
-                    <p className="font-medium text-gray-800">{user.email}</p>
+                    <p className="font-medium text-gray-800 text-sm lg:text-base">{user.email}</p>
                     {isSyncing && (
                       <p className="text-xs text-blue-600">データ同期中...</p>
                     )}
@@ -457,7 +487,7 @@ function App(): React.ReactNode {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setShowBackupModal(true)}
                   className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
@@ -466,7 +496,7 @@ function App(): React.ReactNode {
                 </button>
                 {user && (
                   <button
-                    onClick={() => syncDataWithFirestore(user.uid)}
+                    onClick={() => syncDataWithFirestore()}
                     disabled={isSyncing}
                     className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -496,34 +526,152 @@ function App(): React.ReactNode {
           )}
 
           {!isLoading && !error && (
-            <div className="space-y-6">
-              <StoreManager
-                stores={stores}
-                onStoresChange={setStores}
-              />
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <StoreSelector
-                  stores={stores}
-                  selectedStores={selectedStores}
-                  onStoreSelectionChange={handleStoreSelectionChange}
-                />
-                
-                <MonthSelector
-                  months={monthlyData}
-                  selectedMonths={selectedMonths}
-                  onMonthSelectionChange={handleMonthSelectionChange}
-                  onDeleteMonth={handleDeleteMonth}
-                  onClearAll={handleClearAll}
-                />
-              </div>
-              
-              {!reportData && (
-                <FileUpload onFileProcess={handleFileProcess} />
+            <div className="space-y-4 lg:space-y-6">
+              {activeSection === 'dashboard' && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 lg:gap-6">
+                    <StoreSelector
+                      stores={stores}
+                      selectedStores={selectedStores}
+                      onStoreSelectionChange={handleStoreSelectionChange}
+                    />
+                    
+                    <MonthSelector
+                      months={monthlyData}
+                      selectedMonths={selectedMonths}
+                      onMonthSelectionChange={handleMonthSelectionChange}
+                      onDeleteMonth={handleDeleteMonth}
+                      onClearAll={handleClearAll}
+                    />
+                  </div>
+                  
+                  {!reportData && (
+                    <FileUpload onFileProcess={handleFileProcess} />
+                  )}
+
+                  {reportData && (
+                    <Dashboard data={reportData} onNewUpload={handleFileProcess} lastFileName={lastFileName} />
+                  )}
+                </>
               )}
 
-              {reportData && (
-                <Dashboard data={reportData} onNewUpload={handleFileProcess} lastFileName={lastFileName} />
+              {activeSection === 'stores' && (
+                <StoreManager
+                  stores={stores}
+                  onStoresChange={setStores}
+                />
+              )}
+
+              {activeSection === 'upload' && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">データアップロード</h2>
+                  <FileUpload onFileProcess={handleFileProcess} />
+                </div>
+              )}
+
+              {activeSection === 'reports' && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">レポート</h2>
+                  {reportData ? (
+                    <Dashboard data={reportData} onNewUpload={handleFileProcess} lastFileName={lastFileName} />
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 mb-4">レポートを表示するには、まずデータをアップロードしてください。</p>
+                      <button
+                        onClick={() => setActiveSection('upload')}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                      >
+                        データをアップロード
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSection === 'analytics' && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">分析</h2>
+                  {reportData ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold mb-4">売上分析</h3>
+                          <p className="text-gray-600">詳細な売上分析機能は開発中です。</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold mb-4">トレンド分析</h3>
+                          <p className="text-gray-600">売上トレンドの分析機能は開発中です。</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 mb-4">分析を表示するには、まずデータをアップロードしてください。</p>
+                      <button
+                        onClick={() => setActiveSection('upload')}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                      >
+                        データをアップロード
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSection === 'settings' && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">設定</h2>
+                  <div className="space-y-6">
+                    <div className="border-b pb-4">
+                      <h3 className="text-lg font-semibold mb-3">データ管理</h3>
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => setShowBackupModal(true)}
+                          className="flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                        >
+                          <CloudArrowUpIcon className="w-5 h-5 mr-2" />
+                          バックアップ・復元
+                        </button>
+                        {user && (
+                          <button
+                            onClick={() => syncDataWithFirestore()}
+                            disabled={isSyncing}
+                            className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                          >
+                            <CloudArrowUpIcon className="w-5 h-5 mr-2" />
+                            {isSyncing ? '同期中...' : 'データ同期'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="border-b pb-4">
+                      <h3 className="text-lg font-semibold mb-3">アカウント</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium">{user?.displayName || 'ユーザー'}</p>
+                            <p className="text-sm text-gray-500">{user?.email}</p>
+                          </div>
+                          <button
+                            onClick={handleLogout}
+                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                          >
+                            ログアウト
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">アプリ情報</h3>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <p>バージョン: 1.0.0</p>
+                        <p>最終更新: 2024年12月</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -532,8 +680,8 @@ function App(): React.ReactNode {
       
       {/* バックアップ・復元モーダル */}
       {showBackupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 lg:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">データのバックアップ・復元</h3>
             
             <div className="space-y-4">
@@ -544,7 +692,7 @@ function App(): React.ReactNode {
                 </p>
                 <button
                   onClick={handleBackupDownload}
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm lg:text-base"
                 >
                   バックアップをダウンロード
                 </button>
@@ -581,7 +729,7 @@ function App(): React.ReactNode {
                   setShowBackupModal(false);
                   setBackupError(null);
                 }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm lg:text-base"
               >
                 閉じる
               </button>

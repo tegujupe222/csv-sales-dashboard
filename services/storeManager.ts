@@ -1,4 +1,4 @@
-import type { Store, StoreData, MonthlyData, WaldData } from '../types';
+import type { Store, MonthlyData, WaldData } from '../types';
 
 const STORES_STORAGE_KEY = 'wald_stores';
 const MONTHLY_DATA_STORAGE_KEY = 'wald_monthly_data';

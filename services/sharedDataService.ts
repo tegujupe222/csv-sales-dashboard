@@ -1,5 +1,5 @@
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
-import { Store, DailyEntry, SalesCategoryData, MonthlyData } from '../types';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { Store, MonthlyData } from '../types';
 import { db } from '../firebase';
 
 // 共有データベースのコレクション名

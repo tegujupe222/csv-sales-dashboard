@@ -1,4 +1,4 @@
-import type { Partial, ParseResult } from 'papaparse';
+import type { ParseResult } from 'papaparse';
 import { FileType } from '../types';
 import type { WaldData, SalesCategoryData, DailyEntry, ProductSales, Product } from '../types';
 import { PRODUCT_NAME_MASTER, PRODUCT_CATEGORIES } from '../constants';
@@ -236,7 +236,7 @@ const processRows = (
     if (rows.length <= 1) {
       return reject(new Error("CSVファイルが空か、ヘッダーのみを含んでいます。"));
     }
-    const header = rows.shift();
+    rows.shift(); // ヘッダー行を削除
     
     let processedData: Partial<WaldData> = {};
 

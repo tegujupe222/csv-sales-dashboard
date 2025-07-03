@@ -32,15 +32,7 @@ const GoogleLoginButton: React.FC = () => {
     return (
       <button
         disabled
-        style={{
-          padding: 10,
-          background: '#ccc',
-          color: '#666',
-          border: 'none',
-          borderRadius: 4,
-          fontWeight: 'bold',
-          cursor: 'not-allowed'
-        }}
+        className="w-full lg:w-auto px-6 py-3 lg:py-2 bg-gray-400 text-gray-600 font-semibold rounded-lg cursor-not-allowed text-sm lg:text-base"
       >
         Firebase認証が利用できません
       </button>
@@ -50,15 +42,7 @@ const GoogleLoginButton: React.FC = () => {
   return (
     <button
       onClick={handleLogin}
-      style={{
-        padding: 10,
-        background: '#4285F4',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 4,
-        fontWeight: 'bold',
-        cursor: 'pointer'
-      }}
+      className="w-full lg:w-auto px-6 py-3 lg:py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200 text-sm lg:text-base"
     >
       Googleでログイン
     </button>

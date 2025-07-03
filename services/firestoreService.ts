@@ -1,6 +1,5 @@
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { Store, DailyEntry, SalesCategoryData, MonthlyData } from '../types';
+import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { MonthlyData, SalesCategoryData } from '../types';
 import { db } from '../firebase';
 
 // Firestoreに売上データを保存

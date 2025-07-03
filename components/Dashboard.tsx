@@ -13,7 +13,7 @@ interface DashboardProps {
 const StatCard: React.FC<{ title: string; value: string | number; }> = ({ title, value }) => (
     <div className="bg-white p-4 rounded-lg shadow">
         <h3 className="text-sm font-medium text-gray-500 truncate">{title}</h3>
-        <p className="mt-1 text-3xl font-semibold text-gray-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+        <p className="mt-1 text-2xl lg:text-3xl font-semibold text-gray-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
     </div>
 );
 
@@ -58,19 +58,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onNewUpload, lastFil
 
   return (
     <div className="space-y-6">
-        <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center bg-white p-4 rounded-lg shadow-sm gap-4">
             <div>
-                <h2 className="text-2xl font-bold text-gray-800">
+                <h2 className="text-xl lg:text-2xl font-bold text-gray-800">
                     {data.month?.includes(' - ') ? '複数月レポート' : '月次レポート'}: {data.month || 'N/A'}
                 </h2>
                 <p className="text-sm text-gray-500">
                     最終処理ファイル: <span className="font-medium text-gray-700">{lastFileName}</span>
                     {data.month?.includes(' - ') && (
-                        <span className="ml-4 text-primary font-medium">複数月のデータを統合表示中</span>
+                        <span className="block lg:inline lg:ml-4 text-primary font-medium">複数月のデータを統合表示中</span>
                     )}
                 </p>
             </div>
-            <label className="flex items-center gap-2 px-4 py-2 bg-secondary text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 focus:outline-none cursor-pointer transition">
+            <label className="flex items-center justify-center gap-2 px-4 py-2 bg-secondary text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 focus:outline-none cursor-pointer transition w-full lg:w-auto">
                 <UploadIcon className="w-5 h-5"/>
                 追加データをアップロード
                 <input type="file" className="hidden" onChange={handleFileChange} accept=".csv"/>
@@ -79,40 +79,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onNewUpload, lastFil
       
         <div>
             <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button onClick={() => setActiveTab('summary')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'summary' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>概要</button>
-                    <button onClick={() => setActiveTab('tables')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'tables' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>データテーブル</button>
-                    <button onClick={() => setActiveTab('charts')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'charts' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>グラフ</button>
+                <nav className="-mb-px flex space-x-2 lg:space-x-8 overflow-x-auto" aria-label="Tabs">
+                    <button onClick={() => setActiveTab('summary')} className={`whitespace-nowrap py-4 px-2 lg:px-1 border-b-2 font-medium text-sm ${activeTab === 'summary' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>概要</button>
+                    <button onClick={() => setActiveTab('tables')} className={`whitespace-nowrap py-4 px-2 lg:px-1 border-b-2 font-medium text-sm ${activeTab === 'tables' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>データテーブル</button>
+                    <button onClick={() => setActiveTab('charts')} className={`whitespace-nowrap py-4 px-2 lg:px-1 border-b-2 font-medium text-sm ${activeTab === 'charts' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>グラフ</button>
                 </nav>
             </div>
 
             <div className="mt-6">
                 {activeTab === 'summary' && (
                     <div className="space-y-6">
-                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
                             <StatCard title="カフェ売上合計" value={data.cafe?.totalSales || 0} />
                             <StatCard title="3Fパーティ売上合計" value={data.party3F?.totalSales || 0} />
                             <StatCard title="4Fパーティ売上合計" value={data.party4F?.totalSales || 0} />
                             <StatCard title="商品売上合計" value={productSalesPieData.reduce((acc, cv) => acc + cv.value, 0)} />
                         </div>
                          {data.productSales && (
-                          <div className="bg-white p-6 rounded-lg shadow">
+                          <div className="bg-white p-4 lg:p-6 rounded-lg shadow">
                               <h3 className="text-lg font-medium text-gray-900 mb-4">税率別商品売上</h3>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
                                   <div>
-                                      <h4 className="font-semibold text-gray-700">サンドイッチ</h4>
-                                      <p>8% 売上: {data.productSales.sandwiches.sales8.toLocaleString()}</p>
-                                      <p>10% 売上: {data.productSales.sandwiches.sales10.toLocaleString()}</p>
+                                      <h4 className="font-semibold text-gray-700 text-sm lg:text-base">サンドイッチ</h4>
+                                      <p className="text-sm lg:text-base">8% 売上: {data.productSales.sandwiches.sales8.toLocaleString()}</p>
+                                      <p className="text-sm lg:text-base">10% 売上: {data.productSales.sandwiches.sales10.toLocaleString()}</p>
                                   </div>
                                   <div>
-                                      <h4 className="font-semibold text-gray-700">ドリンク</h4>
-                                      <p>8% 売上: {data.productSales.drinks.sales8.toLocaleString()}</p>
-                                      <p>10% 売上: {data.productSales.drinks.sales10.toLocaleString()}</p>
+                                      <h4 className="font-semibold text-gray-700 text-sm lg:text-base">ドリンク</h4>
+                                      <p className="text-sm lg:text-base">8% 売上: {data.productSales.drinks.sales8.toLocaleString()}</p>
+                                      <p className="text-sm lg:text-base">10% 売上: {data.productSales.drinks.sales10.toLocaleString()}</p>
                                   </div>
                                   <div>
-                                      <h4 className="font-semibold text-gray-700">その他</h4>
-                                      <p>8% 売上: {data.productSales.other.sales8.toLocaleString()}</p>
-                                      <p>10% 売上: {data.productSales.other.sales10.toLocaleString()}</p>
+                                      <h4 className="font-semibold text-gray-700 text-sm lg:text-base">その他</h4>
+                                      <p className="text-sm lg:text-base">8% 売上: {data.productSales.other.sales8.toLocaleString()}</p>
+                                      <p className="text-sm lg:text-base">10% 売上: {data.productSales.other.sales10.toLocaleString()}</p>
                                   </div>
                               </div>
                           </div>
@@ -127,7 +127,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onNewUpload, lastFil
                     </div>
                 )}
                 {activeTab === 'charts' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-4 lg:gap-6">
                        <div className="bg-white p-4 rounded-lg shadow">
                          <h3 className="text-lg font-medium text-gray-900 mb-4">日次売上実績</h3>
                          <SalesChart data={chartData} />

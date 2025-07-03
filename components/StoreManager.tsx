@@ -69,11 +69,11 @@ export const StoreManager: React.FC<StoreManagerProps> = ({ stores, onStoresChan
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-lg font-medium text-gray-900">店舗管理</h3>
           <button
             onClick={handleAddStore}
-            className="flex items-center gap-2 px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors w-full sm:w-auto"
           >
             <PlusIcon className="w-4 h-4" />
             店舗を追加
@@ -92,23 +92,23 @@ export const StoreManager: React.FC<StoreManagerProps> = ({ stores, onStoresChan
             {stores.map((store) => (
               <div
                 key={store.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors gap-3"
               >
-                <div>
-                  <h4 className="font-medium text-gray-900">{store.name}</h4>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900 text-sm lg:text-base">{store.name}</h4>
                   <p className="text-sm text-gray-500">コード: {store.code}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   <button
                     onClick={() => handleEditStore(store)}
-                    className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                    className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
                     title="編集"
                   >
                     <PencilIcon className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteStore(store.id)}
-                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
                     title="削除"
                   >
                     <TrashIcon className="w-4 h-4" />
@@ -122,8 +122,8 @@ export const StoreManager: React.FC<StoreManagerProps> = ({ stores, onStoresChan
 
       {/* モーダル */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 lg:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {editingStore ? '店舗を編集' : '店舗を追加'}
             </h3>
