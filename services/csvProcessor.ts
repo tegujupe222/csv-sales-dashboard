@@ -2,6 +2,7 @@ import type { ParseResult } from 'papaparse';
 import { FileType } from '../types';
 import type { WaldData, SalesCategoryData, DailyEntry, ProductSales, Product } from '../types';
 import { PRODUCT_NAME_MASTER, PRODUCT_CATEGORIES } from '../constants';
+import { analyzeWithOpenAI } from './openaiService';
 
 declare var Papa: {
   parse: (file: File, config: any) => void;
@@ -189,34 +190,87 @@ const processProductSales = (rows: string[][]): Partial<WaldData> => {
     return { productSales };
 }
 
+// --- ファイル内容からFileTypeを推測 ---
+const detectFileTypeByContent = (rows: string[][]): FileType => {
+  if (!rows || rows.length < 2) return FileType.Unknown;
+  const header = rows[0].map(h => h.trim());
+  // 日別売上: 日付/売上/客数/客単価など
+  if (header.includes('日付') && header.includes('売上') && header.includes('客数')) {
+    return FileType.DailySales;
+  }
+  // パーティ: 取引/日付/人数/金額など
+  if (header.some(h => h.includes('取引')) && header.some(h => h.includes('人数')) && header.some(h => h.includes('金額'))) {
+    return FileType.Party;
+  }
+  // 商品別: 商品コード/商品名/税率/売上など
+  if (header.some(h => h.includes('商品')) && header.some(h => h.includes('税率'))) {
+    return FileType.ProductSalesByTaxRate;
+  }
+  // カラム数で判定（例: 45列以上なら商品別）
+  if (header.length >= 45) return FileType.ProductSalesByTaxRate;
+  return FileType.Unknown;
+};
+
+// --- AIでFileTypeを推論 ---
+const detectFileTypeByAI = async (rows: string[][]): Promise<FileType> => {
+  const sample = rows.slice(0, 5).map(r => r.join(",")).join("\n");
+  const prompt = `以下は売上CSVデータのサンプルです。ファイルタイプを次から1つだけ日本語で答えてください：日別売上, パーティ売上, 商品別売上。\n---\n${sample}`;
+  try {
+    const aiResult = await analyzeWithOpenAI(prompt, 'あなたは売上データ分析の専門家です。ファイルタイプを1語で答えてください。');
+    if (typeof aiResult === 'string') {
+      if (aiResult.includes('日別')) return FileType.DailySales;
+      if (aiResult.includes('パーティ')) return FileType.Party;
+      if (aiResult.includes('商品')) return FileType.ProductSalesByTaxRate;
+    }
+  } catch (e) {
+    // fallback: unknown
+  }
+  return FileType.Unknown;
+};
 
 export const processCsvFile = (file: File, selectedStoreCode?: string): Promise<Partial<WaldData>> => {
   return new Promise((resolve, reject) => {
     const fileType = detectFileType(file.name);
     const month = extractMonth(file.name);
-    // 選択された店舗コードがある場合はそれを使用、なければファイル名から抽出
     const storeCode = selectedStoreCode || extractStoreCode(file.name);
 
-    if (fileType === FileType.Unknown) {
-      return reject(new Error("不明またはサポートされていないCSVファイル形式です。"));
-    }
+    // ファイル名で判定できない場合は内容で判定
+    const tryParse = (rows: string[][]) => {
+      let type = fileType;
+      if (type === FileType.Unknown) {
+        type = detectFileTypeByContent(rows);
+      }
+      if (type === FileType.Unknown) {
+        // AI判定
+        detectFileTypeByAI(rows).then(aiType => {
+          if (aiType === FileType.Unknown) {
+            return reject(new Error("不明またはサポートされていないCSVファイル形式です (AI判定も失敗)"));
+          }
+          processRows(rows, aiType, file.name, month, storeCode, resolve, reject);
+        }).catch(() => {
+          return reject(new Error("不明またはサポートされていないCSVファイル形式です (AI判定エラー)"));
+        });
+        return;
+      }
+      processRows(rows, type, file.name, month, storeCode, resolve, reject);
+    };
 
     Papa.parse(file, {
       encoding: "Shift_JIS",
       complete: (results: ParseResult<string[]>) => {
         let rows = results.data;
         if (results.errors.length > 0) {
-            Papa.parse(file, {
-                encoding: "UTF-8",
-                complete: (utf8Results: ParseResult<string[]>) => {
-                    if (utf8Results.errors.length > 0 && utf8Results.data.length <= 1) {
-                         return reject(new Error("Shift_JISおよびUTF-8エンコーディングでのCSV解析に失敗しました。"));
-                    }
-                    processRows(utf8Results.data, fileType, file.name, month, storeCode, resolve, reject);
-                }
-            });
+          Papa.parse(file, {
+            encoding: "UTF-8",
+            complete: (utf8Results: ParseResult<string[]>) => {
+              if (utf8Results.errors.length > 0 && utf8Results.data.length <= 1) {
+                return reject(new Error("Shift_JISおよびUTF-8エンコーディングでのCSV解析に失敗しました。"));
+              }
+              tryParse(utf8Results.data);
+            }
+          });
         } else {
-           processRows(rows, fileType, file.name, month, storeCode, resolve, reject);
+          tryParse(rows);
         }
       },
       error: (err: any) => reject(err),
