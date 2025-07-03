@@ -56,13 +56,6 @@ export interface StoreData {
   uploadHistory?: string[]; // アップロードされたファイル名の履歴
 }
 
-export interface MonthlyData {
-  month: string;
-  stores: StoreData[];
-  lastUpdated: string;
-  totalFileCount: number;
-}
-
 export enum FileType {
     Unknown,
     DailySales,
