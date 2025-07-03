@@ -19,6 +19,7 @@ import {
 import { saveSharedMonthlyData, getSharedMonthlyData } from './services/sharedDataService';
 import { downloadBackup, loadBackup, restoreBackup, compareBackup } from './services/backupService';
 import type { WaldData, Store } from './types';
+import type { MonthlyData as MonthlyDataManager } from './services/dataManager';
 import GoogleLoginButton from './src/components/GoogleLoginButton';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { getUser, registerUser } from './services/userService';
@@ -39,7 +40,7 @@ function App(): React.ReactNode {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFileName, setLastFileName] = useState<string>('');
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [monthlyData, setMonthlyData] = useState<MonthlyDataManager[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
@@ -496,7 +497,7 @@ function App(): React.ReactNode {
               <LogoIcon className="h-8 w-8 text-primary" />
               <h1 className="text-xl lg:text-2xl font-bold text-gray-800">EVEN View</h1>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {reportData && (
                 <button
                   onClick={handleReset}
