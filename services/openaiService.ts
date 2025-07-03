@@ -20,7 +20,14 @@ export async function analyzeWithOpenAI(userMessage: string, systemPrompt = 'あ
   });
 
   if (!res.ok) {
-    throw new Error('OpenAI API request failed');
+    let errorMessage = '';
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.error?.message || JSON.stringify(errorData);
+    } catch (e) {
+      errorMessage = 'No error message in response';
+    }
+    throw new Error(`OpenAI API request failed: ${res.status} ${errorMessage}`);
   }
 
   const data = await res.json();
