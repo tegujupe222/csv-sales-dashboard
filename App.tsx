@@ -666,8 +666,8 @@ function App(): React.ReactNode {
                     <div>
                       <h3 className="text-lg font-semibold mb-3">アプリ情報</h3>
                       <div className="space-y-2 text-sm text-gray-600">
-                        <p>バージョン: 1.0.0</p>
-                        <p>最終更新: 2024年12月</p>
+                        <p>バージョン: 1.0.9</p>
+                        <p>最終更新: 2025年7月3日</p>
                       </div>
                     </div>
                   </div>

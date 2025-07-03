@@ -123,8 +123,8 @@ export const Sidebar = ({ isAdmin, onAdminDashboard, onClose, onNavigate, active
         )}
       </nav>
       <div className="px-4 py-2 text-center text-xs text-gray-500">
-        <p>バージョン 1.0.0</p>
-        <p>&copy; 2024 Your Company</p>
+        <p>バージョン 1.0.9</p>
+        <p>&copy; IGA Factory</p>
       </div>
     </div>
   );
