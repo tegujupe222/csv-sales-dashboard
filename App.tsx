@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { FileUpload } from './components/FileUpload';
 import { Dashboard } from './components/Dashboard';
@@ -71,6 +71,10 @@ function App(): React.ReactNode {
   const [aiReport, setAiReport] = useState<any>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiReportError, setAiReportError] = useState<string | null>(null);
+  const [aiAnalytics, setAiAnalytics] = useState<any>(null);
+  const [aiAnalyticsLoading, setAiAnalyticsLoading] = useState(false);
+  const [aiAnalyticsError, setAiAnalyticsError] = useState<string | null>(null);
+  const analyticsRequested = useRef(false);
   
   // 共有データベースとローカルストレージの完全同期
   const syncDataWithFirestore = useCallback(async () => {
@@ -208,6 +212,37 @@ function App(): React.ReactNode {
         .finally(() => setAiReportLoading(false));
     }
   }, [activeSection, reportData, selectedMonths]);
+
+  // 売上分析用データ（月別）
+  const salesByMonth = monthlyData.map(md => ({
+    month: md.month,
+    sales: md.data?.cafe?.totalSales || 0,
+    guests: md.data?.cafe?.totalGuests || 0,
+    avgSpend: md.data?.cafe?.avgSpend || 0,
+  })).sort((a, b) => a.month.localeCompare(b.month));
+
+  // AI要約・インサイト取得（分析セクション表示時のみ1回）
+  useEffect(() => {
+    if (activeSection === 'analytics' && salesByMonth.length > 0 && !analyticsRequested.current) {
+      setAiAnalytics(null);
+      setAiAnalyticsLoading(true);
+      setAiAnalyticsError(null);
+      analyticsRequested.current = true;
+      analyzeMonthlyReportWithOpenAI('全期間', salesByMonth)
+        .then((result) => {
+          try {
+            setAiAnalytics(JSON.parse(result));
+          } catch {
+            setAiAnalytics(result);
+          }
+        })
+        .catch((e) => setAiAnalyticsError(e.message || 'AI要約取得に失敗しました'))
+        .finally(() => setAiAnalyticsLoading(false));
+    }
+    if (activeSection !== 'analytics') {
+      analyticsRequested.current = false;
+    }
+  }, [activeSection, salesByMonth]);
 
   const handleFileProcess = useCallback(async (file: File) => {
     setAiPreview(null);
@@ -718,30 +753,44 @@ function App(): React.ReactNode {
               {activeSection === 'analytics' && (
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">分析</h2>
-                  {reportData ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h3 className="text-lg font-semibold mb-4">売上分析</h3>
-                          <p className="text-gray-600">詳細な売上分析機能は開発中です。</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <h3 className="text-lg font-semibold mb-4">トレンド分析</h3>
-                          <p className="text-gray-600">売上トレンドの分析機能は開発中です。</p>
-                        </div>
+                  {/* 売上分析グラフ */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-2">月別売上推移</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={salesByMonth}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="sales" name="売上" fill="#8884d8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* AI要約・インサイト */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-2">AI要約・インサイト</h3>
+                    {aiAnalyticsLoading && <div className="text-blue-600">AI要約・インサイトを生成中...</div>}
+                    {aiAnalyticsError && <div className="text-red-600">{aiAnalyticsError}</div>}
+                    {aiAnalytics && (
+                      <div className="bg-blue-50 p-4 rounded">
+                        {aiAnalytics.summary && (
+                          <div className="mb-2 text-base text-gray-800">{aiAnalytics.summary}</div>
+                        )}
+                        {aiAnalytics.insights && Array.isArray(aiAnalytics.insights) && (
+                          <ul className="list-disc pl-5 text-gray-700">
+                            {aiAnalytics.insights.map((insight: string, idx: number) => (
+                              <li key={idx}>{insight}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {!aiAnalytics.summary && !aiAnalytics.insights && (
+                          <pre className="text-xs text-gray-600">{typeof aiAnalytics === 'string' ? aiAnalytics : JSON.stringify(aiAnalytics, null, 2)}</pre>
+                        )}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500 mb-4">分析を表示するには、まずデータをアップロードしてください。</p>
-                      <button
-                        onClick={() => setActiveSection('upload')}
-                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
-                      >
-                        データをアップロード
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  {/* トレンド分析は今後拡張 */}
                 </div>
               )}
 
