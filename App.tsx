@@ -522,7 +522,7 @@ function App(): React.ReactNode {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <LogoIcon className="h-8 w-8 text-primary" />
+              <img src="/logo.png" alt="Company Logo" className="h-8 w-8 mr-3" style={{ objectFit: 'contain' }} />
               <h1 className="text-xl lg:text-2xl font-bold text-gray-800">EVEN View</h1>
             </div>
             <div className="flex items-center gap-3 flex-wrap">

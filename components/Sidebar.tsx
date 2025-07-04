@@ -25,7 +25,7 @@ export const Sidebar = ({ isAdmin, onAdminDashboard, onClientManager, onClose, o
     <div className="w-64 h-full bg-dark-sidebar text-white flex flex-col">
       <div className="flex items-center justify-between h-20 shadow-md px-4">
         <div className="flex items-center">
-          <LogoIcon className="h-8 w-8 mr-3" />
+          <img src="/logo.png" alt="Company Logo" className="h-8 w-8 mr-3" style={{ objectFit: 'contain' }} />
           <h1 className="text-xl lg:text-2xl font-bold">EVEN View</h1>
         </div>
         {/* モバイル用閉じるボタン */}
