@@ -697,10 +697,10 @@ function App(): React.ReactNode {
                       {aiReport.summary && (
                         <div className="mb-2 text-base text-gray-800">
                           <div>月: {aiReport.summary.month}</div>
-                          <div>総売上: {aiReport.summary.totalSales?.toLocaleString()}円</div>
-                          <div>総客数: {aiReport.summary.totalGuests?.toLocaleString()}人</div>
-                          <div>平均客単価: {Math.round(aiReport.summary.avgSpend).toLocaleString()}円</div>
-                          <div>売上トップカテゴリ: {aiReport.summary.topCategory}</div>
+                          <div>総売上: {aiReport.summary.totalSales ? aiReport.summary.totalSales.toLocaleString() : '0'}円</div>
+                          <div>総客数: {aiReport.summary.totalGuests ? aiReport.summary.totalGuests.toLocaleString() : '0'}人</div>
+                          <div>平均客単価: {aiReport.summary.avgSpend ? Math.round(aiReport.summary.avgSpend).toLocaleString() : '0'}円</div>
+                          <div>売上トップカテゴリ: {aiReport.summary.topCategory || '不明'}</div>
                         </div>
                       )}
                       {/* insights */}
@@ -756,16 +756,31 @@ function App(): React.ReactNode {
                   {/* 売上分析グラフ */}
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-2">月別売上推移</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={salesByMonth}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="sales" name="売上" fill="#8884d8" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {salesByMonth.length > 0 ? (
+                      <>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={salesByMonth}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="sales" name="売上" fill="#8884d8" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                        {/* デバッグ情報 */}
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-xs text-gray-500">グラフデータ確認</summary>
+                          <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto" style={{ whiteSpace: 'pre-wrap' }}>
+                            {JSON.stringify(salesByMonth, null, 2)}
+                          </pre>
+                        </details>
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        グラフを表示するには、まずデータをアップロードしてください。
+                      </div>
+                    )}
                   </div>
                   {/* AI要約・インサイト */}
                   <div className="mb-8">
@@ -774,8 +789,15 @@ function App(): React.ReactNode {
                     {aiAnalyticsError && <div className="text-red-600">{aiAnalyticsError}</div>}
                     {aiAnalytics && (
                       <div className="bg-blue-50 p-4 rounded">
-                        {aiAnalytics.summary && (
+                        {aiAnalytics.summary && typeof aiAnalytics.summary === 'string' && (
                           <div className="mb-2 text-base text-gray-800">{aiAnalytics.summary}</div>
+                        )}
+                        {aiAnalytics.summary && typeof aiAnalytics.summary === 'object' && (
+                          <div className="mb-2 text-base text-gray-800">
+                            <div>総売上: {aiAnalytics.summary.totalSales ? aiAnalytics.summary.totalSales.toLocaleString() : '0'}円</div>
+                            <div>総客数: {aiAnalytics.summary.totalGuests ? aiAnalytics.summary.totalGuests.toLocaleString() : '0'}人</div>
+                            <div>平均客単価: {aiAnalytics.summary.avgSpend ? Math.round(aiAnalytics.summary.avgSpend).toLocaleString() : '0'}円</div>
+                          </div>
                         )}
                         {aiAnalytics.insights && Array.isArray(aiAnalytics.insights) && (
                           <ul className="list-disc pl-5 text-gray-700">
