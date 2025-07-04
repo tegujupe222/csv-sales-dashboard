@@ -449,6 +449,10 @@ function App(): React.ReactNode {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 p-4">
         <div className="bg-white p-6 lg:p-8 rounded shadow-md text-center w-full max-w-md">
+          {/* ロゴ画像 */}
+          <img src="/logo.png" alt="Company Logo" className="mx-auto mb-4" style={{ maxWidth: 120, maxHeight: 120 }} />
+          {/* アプリ名 */}
+          <h1 className="text-2xl lg:text-3xl font-extrabold mb-2 text-primary">EVEN View</h1>
           <h2 className="text-xl lg:text-2xl font-bold mb-4">ログイン</h2>
           <p className="mb-4 text-gray-600 text-sm lg:text-base">Googleアカウントでログインしてください</p>
           <GoogleLoginButton />
